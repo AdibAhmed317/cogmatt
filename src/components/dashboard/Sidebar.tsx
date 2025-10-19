@@ -1,5 +1,4 @@
 import {
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   Home,
@@ -10,6 +9,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
+import logoUrl from '@/assets/logo.png?url';
 
 const navLinks = [
   { name: 'Home', href: '/dashboard', icon: Home },
@@ -32,7 +32,11 @@ export default function Sidebar({
       className={`flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'} min-h-screen`}
     >
       <div className='flex items-center gap-2 px-6 py-6'>
-        <Sparkles className='h-7 w-7 text-indigo-500 dark:text-indigo-400' />
+        <img
+          src={logoUrl}
+          alt='Cogmatt logo'
+          className='h-7 w-7 rounded-lg object-contain'
+        />
         {sidebarOpen && (
           <span className='text-xl font-bold text-slate-900 dark:text-white'>
             Cogmatt

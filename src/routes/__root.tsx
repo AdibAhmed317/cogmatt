@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import appCss from '@/styles.css?url';
+import logoUrl from '@/assets/logo.png?url';
 import { ThemeProvider } from '@/lib/theme-provider';
 
 export const Route = createRootRoute({
@@ -27,9 +28,16 @@ export const Route = createRootRoute({
         rel: 'stylesheet',
         href: appCss,
       },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        href: logoUrl,
+      },
     ],
   }),
   component: RootComponent,
+  // Rendered when no child route matches. Provides a friendly 404 UI
+  notFoundComponent: NotFoundComponent,
 });
 
 function RootComponent() {
@@ -53,5 +61,38 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function NotFoundComponent() {
+  return (
+    <RootDocument>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '60vh',
+          padding: '2rem',
+          textAlign: 'center',
+        }}
+      >
+        <h1
+          style={{
+            fontSize: 'clamp(1.5rem, 3vw, 2.5rem)',
+            marginBottom: '0.5rem',
+          }}
+        >
+          Page not found
+        </h1>
+        <p style={{ marginBottom: '1rem' }}>
+          The page you are looking for does not exist or may have been moved.
+        </p>
+        <a href='/' style={{ color: 'var(--link-color, #2563eb)' }}>
+          Go back home
+        </a>
+      </div>
+    </RootDocument>
   );
 }

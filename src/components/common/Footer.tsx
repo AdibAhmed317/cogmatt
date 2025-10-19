@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react';
+import logoUrl from '@/assets/logo.png?url';
 
 const Footer = () => {
   return (
@@ -8,9 +8,11 @@ const Footer = () => {
           {/* Logo & Description */}
           <div className='md:col-span-2'>
             <div className='mb-4 flex items-center gap-2'>
-              <div className='flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-blue-500'>
-                <Sparkles className='h-5 w-5 text-white' />
-              </div>
+              <img
+                src={logoUrl}
+                alt='Cogmatt logo'
+                className='h-9 w-9 rounded-lg object-contain'
+              />
               <span className='text-xl font-bold text-slate-900 dark:text-white'>
                 Cogmatt
               </span>

@@ -1,5 +1,6 @@
 import { Plus, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import PostsTable from '../PostsTable';
+import PostComposer from '../PostComposer';
 
 export default function PostsPage() {
   return (
@@ -130,8 +131,10 @@ export default function PostsPage() {
           </div>
         </div>
 
-        {/* Right Column - Posts Table */}
+        {/* Right Column - Composer & Posts Table */}
         <div className='lg:col-span-2 space-y-4'>
+          {/* Composer */}
+          <PostComposer />
           {/* Search Bar */}
           <div className='flex items-center gap-3'>
             <div className='relative flex-1'>
