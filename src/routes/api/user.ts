@@ -2,104 +2,79 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { fetchAllUsers, fetchUserById, getUserStats } from '@/services/users';
 
+// -----------------------------
+// Hono App Definition
+// -----------------------------
 const app = new Hono();
 
-// GET /api/hono/users
 app.get('/', async (c) => {
   try {
-    const limitRaw = c.req.query('limit');
-    const limitNum = limitRaw ? Number(limitRaw) : undefined;
-    const users = await fetchAllUsers({ limit: limitNum });
+    const limit = Number(c.req.query('limit')) || undefined;
+    const users = await fetchAllUsers({ limit });
     return c.json(users);
-  } catch (error) {
+  } catch (err) {
     return c.json(
-      {
-        message:
-          error instanceof Error ? error.message : 'Failed to fetch users',
-      },
-      { status: 500 as any }
+      { message: (err as Error).message || 'Failed to fetch users' },
+      500
     );
   }
 });
 
-// GET /api/hono/users-v2
 app.get('/users-v2', async (c) => {
   try {
     const users = await fetchAllUsers();
     return c.json({ version: 2, count: users.length, data: users });
-  } catch (error) {
+  } catch (err) {
     return c.json(
-      {
-        message:
-          error instanceof Error ? error.message : 'Failed to fetch users',
-      },
-      { status: 500 as any }
+      { message: (err as Error).message || 'Failed to fetch users' },
+      500
     );
   }
 });
 
-// GET /api/hono/stats
 app.get('/stats', async (c) => {
   try {
     const stats = await getUserStats();
     return c.json(stats);
-  } catch (error) {
+  } catch (err) {
     return c.json(
-      {
-        message:
-          error instanceof Error ? error.message : 'Failed to fetch stats',
-      },
-      { status: 500 as any }
+      { message: (err as Error).message || 'Failed to fetch stats' },
+      500
     );
   }
 });
 
-// GET /api/hono/user/:id
 app.get('/user/:id', async (c) => {
   try {
-    const id = c.req.param('id');
-    const user = await fetchUserById(id);
+    const user = await fetchUserById(c.req.param('id'));
     return c.json(user);
-  } catch (error) {
-    return c.json(
-      { message: error instanceof Error ? error.message : 'User not found' },
-      { status: 404 as any }
-    );
+  } catch (err) {
+    return c.json({ message: (err as Error).message || 'User not found' }, 404);
   }
 });
 
+// -----------------------------
+// Helper: route request to Hono
+// -----------------------------
+const honoHandler = async (req: Request) => {
+  const url = new URL(req.url);
+  // Strip /api/user prefix to get the path Hono expects
+  const newPath = url.pathname.replace(/^\/api\/user/, '');
+  const rewrittenUrl = new URL(newPath + url.search, url.origin);
+  const rewrittenReq = new Request(rewrittenUrl, req);
+  return app.fetch(rewrittenReq);
+};
+
+// -----------------------------
+// TanStack Route Bridge
+// -----------------------------
 export const Route = createFileRoute('/api/user/$' as any)({
   server: {
     handlers: {
-      GET: async ({ request }) => {
-        // Rewrite the URL to remove /api/hono prefix so Hono routes match
-        const url = new URL(request.url);
-        const newPath = url.pathname.replace('/api/hono', '');
-        const newUrl = new URL(newPath + url.search, url.origin);
-        const newRequest = new Request(newUrl, request);
-        return app.fetch(newRequest);
-      },
-      POST: async ({ request }) => {
-        const url = new URL(request.url);
-        const newPath = url.pathname.replace('/api/hono', '');
-        const newUrl = new URL(newPath + url.search, url.origin);
-        const newRequest = new Request(newUrl, request);
-        return app.fetch(newRequest);
-      },
-      PUT: async ({ request }) => {
-        const url = new URL(request.url);
-        const newPath = url.pathname.replace('/api/hono', '');
-        const newUrl = new URL(newPath + url.search, url.origin);
-        const newRequest = new Request(newUrl, request);
-        return app.fetch(newRequest);
-      },
-      DELETE: async ({ request }) => {
-        const url = new URL(request.url);
-        const newPath = url.pathname.replace('/api/hono', '');
-        const newUrl = new URL(newPath + url.search, url.origin);
-        const newRequest = new Request(newUrl, request);
-        return app.fetch(newRequest);
-      },
+      GET: async ({ request }) => honoHandler(request),
+      POST: async ({ request }) => honoHandler(request),
+      PUT: async ({ request }) => honoHandler(request),
+      DELETE: async ({ request }) => honoHandler(request),
     },
   },
 });

@@ -9,6 +9,7 @@ export interface UserListOptions {
   limit?: number;
 }
 
+// Fetch all users with optional limit
 export async function fetchAllUsers(
   options?: UserListOptions
 ): Promise<User[]> {
@@ -30,6 +31,7 @@ export async function fetchAllUsers(
   return list.map((u) => ({ id: u.id, name: u.name, email: u.email }));
 }
 
+// Fetch a single user by ID
 export async function fetchUserById(id: string): Promise<User> {
   const res = await fetch(`https://jsonplaceholder.typicode.com/users/${id}`);
   if (!res.ok) {
@@ -40,6 +42,7 @@ export async function fetchUserById(id: string): Promise<User> {
   return { id: u.id, name: u.name, email: u.email };
 }
 
+// Fetch user statistics
 export async function getUserStats() {
   const users = await fetchAllUsers();
   return {
