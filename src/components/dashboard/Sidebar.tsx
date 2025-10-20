@@ -9,7 +9,6 @@ import {
   Settings,
 } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
-import logoUrl from '@/assets/logo.png?url';
 
 const navLinks = [
   { name: 'Home', href: '/dashboard', icon: Home },
@@ -33,7 +32,7 @@ export default function Sidebar({
     >
       <div className='flex items-center gap-2 px-6 py-6'>
         <img
-          src={logoUrl}
+          src='/logo.png'
           alt='Cogmatt logo'
           className='h-7 w-7 rounded-lg object-contain'
         />

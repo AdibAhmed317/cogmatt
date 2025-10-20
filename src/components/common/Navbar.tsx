@@ -2,8 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '@/lib/theme-provider';
-import logoUrl from '@/assets/logo.png?url';
+import { useTheme } from '@/application/lib/theme-provider';
 
 const Navbar = () => {
   const { theme, setTheme } = useTheme();
@@ -24,7 +23,7 @@ const Navbar = () => {
           {/* Logo */}
           <a href='/' className='flex items-center gap-2'>
             <img
-              src={logoUrl}
+              src='/logo.png'
               alt='Cogmatt logo'
               className='h-9 w-9 rounded-lg object-contain'
             />

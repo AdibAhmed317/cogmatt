@@ -1,5 +1,3 @@
-import logoUrl from '@/assets/logo.png?url';
-
 const Footer = () => {
   return (
     <footer className='border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50'>
@@ -9,7 +7,7 @@ const Footer = () => {
           <div className='md:col-span-2'>
             <div className='mb-4 flex items-center gap-2'>
               <img
-                src={logoUrl}
+                src='/logo.png'
                 alt='Cogmatt logo'
                 className='h-9 w-9 rounded-lg object-contain'
               />

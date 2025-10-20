@@ -6,8 +6,7 @@ import {
 } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import appCss from '@/styles.css?url';
-import logoUrl from '@/assets/logo.png?url';
-import { ThemeProvider } from '@/lib/theme-provider';
+import { ThemeProvider } from '@/application/lib/theme-provider';
 
 export const Route = createRootRoute({
   head: () => ({
@@ -31,12 +30,11 @@ export const Route = createRootRoute({
       {
         rel: 'icon',
         type: 'image/png',
-        href: logoUrl,
+        href: '/logo.png',
       },
     ],
   }),
   component: RootComponent,
-  // Rendered when no child route matches. Provides a friendly 404 UI
   notFoundComponent: NotFoundComponent,
 });
 
