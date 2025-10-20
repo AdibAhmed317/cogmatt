@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "serve": "vite preview",
+    "start": "bun .output/server/index.mjs",
     "test": "vitest run"
   },
   "dependencies": {
@@ -18,6 +18,8 @@
     "@tanstack/react-start": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
     "better-auth": "^1.3.28",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.44.6",
@@ -32,6 +34,7 @@
     "vite-tsconfig-paths": "^5.1.4"
   },
   "devDependencies": {
+    "@tanstack/nitro-v2-vite-plugin": "^1.133.17",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^22.10.2",

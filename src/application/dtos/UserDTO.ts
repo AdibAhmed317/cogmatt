@@ -1,17 +1,53 @@
-// Application Layer - Data Transfer Objects
-// How data is transferred between layers
+// Application Layer - Data Transfer Objects (DTOs)
+// Class-based DTOs with validation decorators (ASP.NET Core style)
 
-export interface UserDTO {
-  id: number;
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
+
+// DTO for creating a new user
+export class CreateUserDTO {
+  @IsNotEmpty()
+  @IsString()
   name: string;
+
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
 }
 
-export interface UserStatsDTO {
-  totalUsers: number;
-  sample: UserDTO[];
+// DTO for updating a user
+export class UpdateUserDTO {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 }
 
-export interface UserListOptionsDTO {
+// DTO for user response
+export class UserDTO {
+  @IsNumber()
+  id: number;
+
+  @IsString()
+  name: string;
+
+  @IsEmail()
+  email: string;
+}
+
+// DTO for user list options
+export class UserListOptionsDTO {
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
   limit?: number;
 }
