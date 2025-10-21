@@ -1,14 +1,20 @@
 import {
   HeadContent,
   Outlet,
-  createRootRoute,
+  createRootRouteWithContext,
   Scripts,
 } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import appCss from '@/styles.css?url';
-import { ThemeProvider } from '@/application/lib/theme-provider';
+import { ThemeProvider } from '@/presentation/contexts/ThemeContext';
+import type { AuthState } from '@/presentation/contexts/AuthContext';
+import { AuthProvider } from '@/presentation/contexts/AuthContext';
 
-export const Route = createRootRoute({
+interface RouterContext {
+  auth: AuthState;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       {
@@ -41,9 +47,11 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <ThemeProvider defaultTheme='system' storageKey='cogmatt-theme'>
-        <Outlet />
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider defaultTheme='system' storageKey='cogmatt-theme'>
+          <Outlet />
+        </ThemeProvider>
+      </AuthProvider>
     </RootDocument>
   );
 }

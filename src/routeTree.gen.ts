@@ -23,6 +23,7 @@ import { Route as DashboardPostsRouteImport } from './routes/dashboard/posts'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard/analytics'
 import { Route as DashboardAiRouteImport } from './routes/dashboard/ai'
 import { Route as ApiUserRouteImport } from './routes/api/user'
+import { Route as ApiAuthRouteImport } from './routes/api/auth'
 
 const UserRoute = UserRouteImport.update({
   id: '/user',
@@ -94,6 +95,11 @@ const ApiUserRoute = ApiUserRouteImport.update({
   path: '/api/user',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthRoute = ApiAuthRouteImport.update({
+  id: '/api/auth',
+  path: '/api/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/user': typeof UserRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/user': typeof ApiUserRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/user': typeof UserRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/user': typeof ApiUserRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/user': typeof UserRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/user': typeof ApiUserRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/signup'
     | '/user'
+    | '/api/auth'
     | '/api/user'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/signup'
     | '/user'
+    | '/api/auth'
     | '/api/user'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/signup'
     | '/user'
+    | '/api/auth'
     | '/api/user'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -201,6 +213,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   SignupRoute: typeof SignupRoute
   UserRoute: typeof UserRoute
+  ApiAuthRoute: typeof ApiAuthRoute
   ApiUserRoute: typeof ApiUserRoute
 }
 
@@ -304,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUserRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth': {
+      id: '/api/auth'
+      path: '/api/auth'
+      fullPath: '/api/auth'
+      preLoaderRoute: typeof ApiAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -337,6 +357,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   SignupRoute: SignupRoute,
   UserRoute: UserRoute,
+  ApiAuthRoute: ApiAuthRoute,
   ApiUserRoute: ApiUserRoute,
 }
 export const routeTree = rootRouteImport

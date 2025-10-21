@@ -1,20 +1,65 @@
 import { motion } from 'framer-motion';
-import { Mail, Lock, Sparkles, Github, Chrome } from 'lucide-react';
+import { Mail, Lock, Sparkles, Github, Chrome, User } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { useAuth } from '@/presentation/contexts/AuthContext';
 
 export default function SignupPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const auth = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    setError('');
+
+    // Client-side validation
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
       setIsLoading(false);
-      alert('Signup functionality coming soon!');
-    }, 1500);
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+        credentials: 'include', // Important: Send cookies
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle validation errors
+        if (data.errors && Array.isArray(data.errors)) {
+          throw new Error(data.errors.join(', '));
+        }
+        throw new Error(data.message || 'Registration failed');
+      }
+
+      // Registration successful, update auth state
+      await auth.checkAuth();
+
+      // Success - navigate to dashboard
+      navigate({ to: '/dashboard' });
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during registration');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialSignup = (provider: string) => {
@@ -50,6 +95,18 @@ export default function SignupPage() {
                 Sign up to start creating and posting everywhere
               </p>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className='mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400'
+              >
+                {error}
+              </motion.div>
+            )}
+
             {/* Social Signup Buttons */}
             <div className='mb-6 space-y-3'>
               <motion.button
@@ -84,6 +141,28 @@ export default function SignupPage() {
             </div>
             {/* Signup Form */}
             <form onSubmit={handleSubmit} className='space-y-4'>
+              {/* Name Field */}
+              <div>
+                <label
+                  htmlFor='name'
+                  className='mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300'
+                >
+                  Full Name
+                </label>
+                <div className='relative'>
+                  <User className='absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400' />
+                  <input
+                    id='name'
+                    type='text'
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    placeholder='John Doe'
+                    className='w-full rounded-lg border-2 border-slate-200 bg-white py-3 pl-10 pr-4 text-slate-900 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-indigo-400'
+                  />
+                </div>
+              </div>
+
               {/* Email Field */}
               <div>
                 <label

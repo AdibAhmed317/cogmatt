@@ -1,4 +1,3 @@
-// UserService class - ASP.NET Core style
 import { User } from '@/domain/entities/UserEntity';
 import { UserRepository } from '@/infrastructure/repositories/UserRepository';
 

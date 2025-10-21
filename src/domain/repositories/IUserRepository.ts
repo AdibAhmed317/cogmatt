@@ -8,7 +8,7 @@ export interface UserListOptions {
 }
 
 export interface IUserRepository {
-  findAll(options?: UserListOptions): Promise<User[]>;
-  findById(id: string): Promise<User | null>;
-  getStats(): Promise<{ totalUsers: number; sample: User[] }>;
+  FindAll(options?: UserListOptions): Promise<User[]>;
+  FindById(id: string): Promise<User | null>;
+  GetStats(): Promise<{ totalUsers: number; sample: User[] }>;
 }

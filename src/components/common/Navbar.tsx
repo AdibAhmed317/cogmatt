@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '@/application/lib/theme-provider';
+import { useTheme } from '@/presentation/contexts/ThemeContext';
 
 const Navbar = () => {
   const { theme, setTheme } = useTheme();

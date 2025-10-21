@@ -2,8 +2,9 @@
 // Concrete implementation of domain repository interface
 
 import { User } from '@/domain/entities/UserEntity';
+import { IUserRepository } from '@/domain/repositories/IUserRepository';
 
-export class UserRepository {
+export class UserRepository implements IUserRepository {
   private readonly apiUrl = 'https://jsonplaceholder.typicode.com/users';
 
   async FindAll(options?: { limit?: number }): Promise<User[]> {
@@ -26,10 +27,14 @@ export class UserRepository {
     return list.map(
       (u) =>
         new User(
-          u.id,
-          u.name ?? null,
+          String(u.id),
+          u.name ?? 'Unknown',
           u.email,
-          u.createdAt ? new Date(u.createdAt) : null
+          '', // password - not exposed by API
+          'user', // role - default for API users
+          false, // emailVerified
+          new Date(u.createdAt || Date.now()),
+          new Date(u.createdAt || Date.now())
         )
     );
   }
@@ -43,10 +48,14 @@ export class UserRepository {
 
     const data = await res.json();
     return new User(
-      data.id,
-      data.name ?? null,
+      String(data.id),
+      data.name ?? 'Unknown',
       data.email,
-      data.createdAt ? new Date(data.createdAt) : null
+      '', // password - not exposed by API
+      'user', // role - default for API users
+      false, // emailVerified
+      new Date(data.createdAt || Date.now()),
+      new Date(data.createdAt || Date.now())
     );
   }
 

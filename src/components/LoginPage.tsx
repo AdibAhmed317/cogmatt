@@ -2,20 +2,32 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, Sparkles, Github, Chrome } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useAuth } from '@/presentation/contexts/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const auth = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setError('');
+
+    try {
+      // Use auth context's login method
+      await auth.login(email, password);
+
+      // Success - navigate to dashboard
       navigate({ to: '/dashboard' });
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during login');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider: string) => {
@@ -51,6 +63,18 @@ export default function LoginPage() {
                 Sign in to your account to continue
               </p>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className='mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400'
+              >
+                {error}
+              </motion.div>
+            )}
+
             {/* Social Login Buttons */}
             <div className='mb-6 space-y-3'>
               <motion.button

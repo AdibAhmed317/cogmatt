@@ -100,10 +100,12 @@ const LandingPage = () => {
                   <div className='h-3 w-3 rounded-full bg-yellow-400' />
                   <div className='h-3 w-3 rounded-full bg-green-400' />
                 </div>
-                <div className='aspect-video bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-950 dark:to-blue-950'>
-                  <div className='flex h-full items-center justify-center text-slate-400'>
-                    <BarChart3 className='h-24 w-24 opacity-20' />
-                  </div>
+                <div className='aspect-video bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-950 dark:to-blue-950 overflow-hidden'>
+                  <img
+                    src='/assets/hero.png'
+                    alt='Cogmatt Dashboard Preview'
+                    className='h-full w-full object-fill'
+                  />
                 </div>
               </div>
             </div>
@@ -237,9 +239,13 @@ const LandingPage = () => {
             >
               <div className='absolute -inset-4 rounded-3xl bg-gradient-to-r from-indigo-500 to-blue-500 opacity-20 blur-3xl' />
               <div className='relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900'>
-                <div className='aspect-[4/3] bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900'>
+                <div className='aspect-[5/3] bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900'>
                   <div className='flex h-full items-center justify-center'>
-                    <BarChart3 className='h-32 w-32 text-slate-300 dark:text-slate-700' />
+                    <img
+                      src='/assets/posts.png'
+                      alt='Dashboard Showcase'
+                      className='absolute h-full w-full object-fill'
+                    />
                   </div>
                 </div>
               </div>
