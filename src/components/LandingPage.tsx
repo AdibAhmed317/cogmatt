@@ -1,15 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import {
-  Sparkles,
-  Zap,
-  Calendar,
-  BarChart3,
-  Check,
-  ArrowRight,
-  Star,
-} from 'lucide-react';
+import { Sparkles, Zap, Calendar, Check, ArrowRight, Star } from 'lucide-react';
 import Navbar from './common/Navbar';
 import { useNavigate } from '@tanstack/react-router';
 import Footer from './common/Footer';

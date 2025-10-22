@@ -1,16 +1,11 @@
 import { motion } from 'framer-motion';
 import {
   Zap,
-  Shield,
   Sparkles,
   Users,
-  Globe,
   BarChart,
   Lock,
-  Cpu,
   Cloud,
-  Smartphone,
-  GitBranch,
   Headphones,
   Calendar,
 } from 'lucide-react';
