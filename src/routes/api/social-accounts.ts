@@ -1,17 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { AuthController } from '@/presentation/controllers/AuthController';
+import { SocialAccountController } from '@/presentation/controllers/SocialAccountController';
 
 // -----------------------------
 // Helper: route request to Hono
 // -----------------------------
-const authController = new AuthController();
+const socialAccountController = new SocialAccountController();
 const honoHandler = async (req: Request) => {
   const url = new URL(req.url);
-  // Strip /api/auth prefix to get the path Hono expects
-  const newPath = url.pathname.replace(/^\/api\/auth/, '');
+  // Strip /api/social-accounts prefix to get the path Hono expects
+  const newPath = url.pathname.replace(/^\/api\/social-accounts/, '');
   const rewrittenUrl = new URL(newPath + url.search, url.origin);
 
-  // Clone the incoming request and forward method/headers/body so cookies are preserved
+  // Clone the incoming request and forward method/headers/body
   const init: RequestInit = {
     method: req.method,
     headers: req.headers,
@@ -24,18 +24,17 @@ const honoHandler = async (req: Request) => {
   }
 
   const rewrittenReq = new Request(rewrittenUrl.toString(), init);
-  return authController.router.fetch(rewrittenReq);
+  return socialAccountController.router.fetch(rewrittenReq);
 };
 
 // -----------------------------
 // TanStack Route Bridge
 // -----------------------------
-export const Route = createFileRoute('/api/auth/$' as any)({
+export const Route = createFileRoute('/api/social-accounts/$' as any)({
   server: {
     handlers: {
       GET: async ({ request }) => {
         const response = await honoHandler(request);
-        // Ensure Set-Cookie and all headers are preserved in the response
         return new Response(response.body, {
           status: response.status,
           statusText: response.statusText,
@@ -43,14 +42,6 @@ export const Route = createFileRoute('/api/auth/$' as any)({
         });
       },
       POST: async ({ request }) => {
-        const response = await honoHandler(request);
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-        });
-      },
-      PUT: async ({ request }) => {
         const response = await honoHandler(request);
         return new Response(response.body, {
           status: response.status,

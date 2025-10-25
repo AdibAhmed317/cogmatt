@@ -1,6 +1,215 @@
-import { User, Bell, Shield, Globe } from 'lucide-react';
+import { User, Bell, Shield, Globe, Lock, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/presentation/contexts/AuthContext';
+
+interface SocialAccount {
+  id: string;
+  platformName: string;
+  username: string;
+  profilePicture?: string;
+  profileUrl?: string;
+  isExpired: boolean;
+  createdAt: string;
+}
+
+interface FacebookPage {
+  id: string;
+  name: string;
+  access_token: string;
+  picture?: {
+    data: {
+      url: string;
+    };
+  };
+}
 
 export default function SettingsPage() {
+  const { checkAuth } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+  const [updateErr, setUpdateErr] = useState<string | null>(null);
+
+  // Social accounts state
+  const [accounts, setAccounts] = useState<SocialAccount[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [pages, setPages] = useState<FacebookPage[]>([]);
+  const [showPageSelector, setShowPageSelector] = useState(false);
+  const [agencyId, setAgencyId] = useState<string>('');
+
+  // Load connected accounts
+  useEffect(() => {
+    loadAccounts();
+  }, []);
+
+  const loadAccounts = async () => {
+    try {
+      setLoadingAccounts(true);
+      // TODO: Get actual agencyId from auth context
+      const tempAgencyId = 'temp-agency-id'; // Replace with actual agency ID
+      setAgencyId(tempAgencyId);
+
+      const response = await fetch(`/api/social-accounts/${tempAgencyId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAccounts(data);
+      }
+    } catch (error) {
+      console.error('Failed to load accounts:', error);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  const handleConnectFacebook = async () => {
+    try {
+      setConnecting(true);
+
+      // Get auth URL
+      const response = await fetch(
+        `/api/social-accounts/facebook/auth?agencyId=${agencyId}`
+      );
+      const data = await response.json();
+
+      if (!data.authUrl) {
+        throw new Error('Failed to get auth URL');
+      }
+
+      // Open popup
+      const width = 600;
+      const height = 700;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+
+      const popup = window.open(
+        data.authUrl,
+        'Facebook Login',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      // Listen for callback
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.data.type === 'FACEBOOK_AUTH_SUCCESS') {
+          setPages(event.data.pages || []);
+          setShowPageSelector(true);
+          setAgencyId(event.data.agencyId);
+          popup?.close();
+        } else if (event.data.type === 'FACEBOOK_AUTH_ERROR') {
+          console.error('Facebook auth error:', event.data.error);
+          alert(`Authentication failed: ${event.data.error}`);
+          setConnecting(false);
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+
+      // Cleanup
+      const checkClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', handleMessage);
+          setConnecting(false);
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Error connecting Facebook:', error);
+      alert('Failed to connect Facebook account');
+      setConnecting(false);
+    }
+  };
+
+  const handleSelectPage = async (page: FacebookPage) => {
+    try {
+      const response = await fetch(
+        '/api/social-accounts/facebook/connect-page',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agencyId,
+            pageId: page.id,
+            pageName: page.name,
+            pageAccessToken: page.access_token,
+            profilePicture: page.picture?.data?.url,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        await loadAccounts();
+        setShowPageSelector(false);
+        setPages([]);
+        setConnecting(false);
+      } else {
+        throw new Error('Failed to connect page');
+      }
+    } catch (error) {
+      console.error('Error connecting page:', error);
+      alert('Failed to connect Facebook page');
+    }
+  };
+
+  const handleDisconnect = async (accountId: string) => {
+    if (!confirm('Are you sure you want to disconnect this account?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/social-accounts/${accountId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await loadAccounts();
+      } else {
+        throw new Error('Failed to disconnect account');
+      }
+    } catch (error) {
+      console.error('Error disconnecting account:', error);
+      alert('Failed to disconnect account');
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    setUpdateMsg(null);
+    setUpdateErr(null);
+    if (!newPassword || newPassword.length < 8) {
+      setUpdateErr('New password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setUpdateErr('New password and confirm password do not match');
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      const res = await fetch('/api/auth/set-password', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: currentPassword || undefined,
+          newPassword,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok)
+        throw new Error(data?.message || 'Failed to update password');
+      setUpdateMsg('Password updated successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      // refresh auth state in case anything depends on it
+      await checkAuth();
+    } catch (e: any) {
+      setUpdateErr(e.message || 'Failed to update password');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
   return (
     <div className='space-y-6'>
       {/* Header */}
@@ -113,39 +322,132 @@ export default function SettingsPage() {
               Connected Accounts
             </h2>
           </div>
-          <div className='space-y-3'>
-            {[
-              { name: 'Twitter', connected: true, username: '@alexjohnson' },
-              { name: 'Instagram', connected: true, username: '@alex.creates' },
-              { name: 'LinkedIn', connected: true, username: 'Alex Johnson' },
-              { name: 'Facebook', connected: false, username: null },
-              { name: 'TikTok', connected: false, username: null },
-            ].map((account, idx) => (
-              <div
-                key={idx}
-                className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'
-              >
-                <div>
-                  <p className='font-medium text-slate-900 dark:text-white'>
-                    {account.name}
-                  </p>
-                  {account.connected && (
-                    <p className='text-sm text-slate-600 dark:text-slate-400'>
-                      {account.username}
-                    </p>
-                  )}
+
+          {/* Page Selector Modal */}
+          {showPageSelector && pages.length > 0 && (
+            <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+              <div className='bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full mx-4'>
+                <h3 className='text-lg font-bold text-slate-900 dark:text-white mb-4'>
+                  Select a Facebook Page
+                </h3>
+                <div className='space-y-2 max-h-96 overflow-y-auto'>
+                  {pages.map((page) => (
+                    <button
+                      key={page.id}
+                      onClick={() => handleSelectPage(page)}
+                      className='w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors'
+                    >
+                      {page.picture?.data?.url && (
+                        <img
+                          src={page.picture.data.url}
+                          alt={page.name}
+                          className='h-10 w-10 rounded-full'
+                        />
+                      )}
+                      <span className='font-medium text-slate-900 dark:text-white'>
+                        {page.name}
+                      </span>
+                    </button>
+                  ))}
                 </div>
                 <button
-                  className={`rounded-lg px-4 py-2 font-medium ${
-                    account.connected
-                      ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  }`}
+                  onClick={() => {
+                    setShowPageSelector(false);
+                    setPages([]);
+                    setConnecting(false);
+                  }}
+                  className='mt-4 w-full px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 >
-                  {account.connected ? 'Disconnect' : 'Connect'}
+                  Cancel
                 </button>
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Accounts List */}
+          <div className='space-y-3'>
+            {loadingAccounts ? (
+              <div className='flex items-center justify-center py-8'>
+                <Loader2 className='h-6 w-6 animate-spin text-indigo-600' />
+              </div>
+            ) : (
+              <>
+                {/* Show connected Facebook accounts */}
+                {accounts
+                  .filter((acc) => acc.platformName === 'Facebook')
+                  .map((account) => (
+                    <div
+                      key={account.id}
+                      className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'
+                    >
+                      <div>
+                        <p className='font-medium text-slate-900 dark:text-white'>
+                          Facebook
+                        </p>
+                        <p className='text-sm text-slate-600 dark:text-slate-400'>
+                          {account.username}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDisconnect(account.id)}
+                        className='rounded-lg px-4 py-2 font-medium bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  ))}
+
+                {/* Show Facebook connect button if not connected */}
+                {!accounts.some((acc) => acc.platformName === 'Facebook') && (
+                  <div className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'>
+                    <div>
+                      <p className='font-medium text-slate-900 dark:text-white'>
+                        Facebook
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleConnectFacebook}
+                      disabled={connecting}
+                      className='rounded-lg px-4 py-2 font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2'
+                    >
+                      {connecting ? (
+                        <>
+                          <Loader2 className='h-4 w-4 animate-spin' />
+                          Connecting...
+                        </>
+                      ) : (
+                        'Connect'
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Placeholder for other platforms (mock for now) */}
+                {[
+                  { name: 'Twitter', connected: false },
+                  { name: 'Instagram', connected: false },
+                  { name: 'LinkedIn', connected: false },
+                  { name: 'TikTok', connected: false },
+                ].map((platform, idx) => (
+                  <div
+                    key={idx}
+                    className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'
+                  >
+                    <div>
+                      <p className='font-medium text-slate-900 dark:text-white'>
+                        {platform.name}
+                      </p>
+                    </div>
+                    <button
+                      disabled
+                      className='rounded-lg px-4 py-2 font-medium bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
+                    >
+                      Coming Soon
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
 
@@ -158,13 +460,70 @@ export default function SettingsPage() {
             </h2>
           </div>
           <div className='space-y-4'>
-            <div>
-              <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'>
-                Change Password
-              </label>
-              <button className='rounded-lg bg-slate-100 px-4 py-2 font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'>
-                Update Password
-              </button>
+            <div className='rounded-lg border border-slate-200 dark:border-slate-700 p-4'>
+              <div className='flex items-center gap-2 mb-3'>
+                <Lock className='h-5 w-5 text-slate-500' />
+                <span className='font-medium text-slate-900 dark:text-white'>
+                  Set or Update Password
+                </span>
+              </div>
+              {updateErr && (
+                <div className='mb-3 rounded-md bg-red-50 dark:bg-red-900/20 p-2 text-sm text-red-600 dark:text-red-400'>
+                  {updateErr}
+                </div>
+              )}
+              {updateMsg && (
+                <div className='mb-3 rounded-md bg-green-50 dark:bg-emerald-900/20 p-2 text-sm text-emerald-700 dark:text-emerald-300'>
+                  {updateMsg}
+                </div>
+              )}
+              <div className='grid gap-3 grid-cols-1'>
+                <div>
+                  <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1'>
+                    Current Password (if set)
+                  </label>
+                  <input
+                    type='password'
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder='••••••••'
+                    className='w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1'>
+                    New Password
+                  </label>
+                  <input
+                    type='password'
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder='At least 8 characters'
+                    className='w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1'>
+                    Confirm Password
+                  </label>
+                  <input
+                    type='password'
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder='Repeat new password'
+                    className='w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white'
+                  />
+                </div>
+              </div>
+              <div className='mt-3'>
+                <button
+                  onClick={handleUpdatePassword}
+                  disabled={isUpdating}
+                  className='rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-60'
+                >
+                  {isUpdating ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
             </div>
             <div className='flex items-center justify-between'>
               <div>

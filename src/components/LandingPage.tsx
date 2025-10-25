@@ -24,22 +24,22 @@ const LandingPage = () => {
             transition={{ duration: 0.6 }}
             className='text-center'
           >
-            <div className='mb-6 inline-flex items-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'>
+            {/* <div className='mb-6 inline-flex items-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'>
               <Sparkles className='h-4 w-4' />
               Powered by AI
-            </div>
+            </div> */}
 
             <h1 className='mb-6 text-5xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-6xl lg:text-7xl'>
               Create, Post & Grow
               <br />
               <span className='bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent'>
-                with AI.
+                with Cogmatt.
               </span>
             </h1>
 
             <p className='mx-auto mb-8 max-w-2xl text-lg text-slate-600 dark:text-slate-400'>
               Cogmatt helps you generate, schedule, and optimize your social
-              media content—all in one place.
+              media content all in one place.
             </p>
 
             <div className='flex flex-wrap items-center justify-center gap-4'>

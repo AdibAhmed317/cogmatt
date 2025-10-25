@@ -20,6 +20,7 @@ export class AuthRepository implements IAuthRepository {
         name,
         email,
         password: hashedPassword,
+        authProvider: 'credentials',
         role: 'user',
         emailVerified: false,
       })
@@ -30,6 +31,8 @@ export class AuthRepository implements IAuthRepository {
       newUser.name,
       newUser.email,
       newUser.password,
+      newUser.googleId,
+      newUser.authProvider,
       newUser.role,
       newUser.emailVerified,
       newUser.createdAt,
@@ -47,6 +50,8 @@ export class AuthRepository implements IAuthRepository {
       user.name,
       user.email,
       user.password,
+      user.googleId,
+      user.authProvider,
       user.role,
       user.emailVerified,
       user.createdAt,
@@ -64,11 +69,116 @@ export class AuthRepository implements IAuthRepository {
       user.name,
       user.email,
       user.password,
+      user.googleId,
+      user.authProvider,
       user.role,
       user.emailVerified,
       user.createdAt,
       user.updatedAt
     );
+  }
+
+  async FindByGoogleId(googleId: string): Promise<User | null> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.googleId, googleId));
+
+    if (!user) return null;
+
+    return new User(
+      user.id,
+      user.name,
+      user.email,
+      user.password,
+      user.googleId,
+      user.authProvider,
+      user.role,
+      user.emailVerified,
+      user.createdAt,
+      user.updatedAt
+    );
+  }
+
+  async FindOrCreateGoogleUser(
+    googleId: string,
+    email: string,
+    name: string
+  ): Promise<User> {
+    // First check if user exists by Google ID
+    const existingUser = await this.FindByGoogleId(googleId);
+    if (existingUser) {
+      return existingUser;
+    }
+
+    // Check if user exists by email (user might have signed up with credentials first)
+    const userByEmail = await this.FindByEmail(email);
+    if (userByEmail) {
+      // Link Google account to existing user
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          googleId,
+          authProvider: 'google',
+          emailVerified: true, // Google accounts are verified
+          updatedAt: new Date(),
+        })
+        .where(eq(users.email, email))
+        .returning();
+
+      return new User(
+        updatedUser.id,
+        updatedUser.name,
+        updatedUser.email,
+        updatedUser.password,
+        updatedUser.googleId,
+        updatedUser.authProvider,
+        updatedUser.role,
+        updatedUser.emailVerified,
+        updatedUser.createdAt,
+        updatedUser.updatedAt
+      );
+    }
+
+    // Create new user with Google
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        name,
+        email,
+        googleId,
+        authProvider: 'google',
+        password: null, // No password for OAuth users
+        role: 'user',
+        emailVerified: true, // Google accounts are verified
+      })
+      .returning();
+
+    return new User(
+      newUser.id,
+      newUser.name,
+      newUser.email,
+      newUser.password,
+      newUser.googleId,
+      newUser.authProvider,
+      newUser.role,
+      newUser.emailVerified,
+      newUser.createdAt,
+      newUser.updatedAt
+    );
+  }
+
+  async UpdatePassword(userId: string, newPassword: string): Promise<void> {
+    const bcrypt = await import('bcryptjs');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async VerifyPassword(

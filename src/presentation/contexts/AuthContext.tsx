@@ -1,5 +1,6 @@
 // Auth Context Provider
 // Manages authentication state using /api/auth/me endpoint and cookies
+// Implements automatic token refresh to keep user logged in
 
 import {
   createContext,
@@ -7,6 +8,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useRef,
 } from 'react';
 
 export interface AuthUser {
@@ -26,9 +28,75 @@ export interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+// Helper function to decode JWT and check expiry
+function getTokenExpiry(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp ? payload.exp * 1000 : null; // Convert to milliseconds
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Refresh the access token using the refresh token
+  const refreshToken = async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include', // Sends refresh token cookie
+        headers: { Accept: 'application/json' },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Schedule next refresh
+        scheduleTokenRefresh(data.accessToken);
+        return true;
+      } else {
+        // Refresh token expired or invalid, log out
+        setUser(null);
+        return false;
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      setUser(null);
+      return false;
+    }
+  };
+
+  // Schedule automatic token refresh before expiry
+  const scheduleTokenRefresh = (accessToken: string) => {
+    // Clear existing timer
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+
+    const expiry = getTokenExpiry(accessToken);
+    if (!expiry) return;
+
+    const now = Date.now();
+    const timeUntilExpiry = expiry - now;
+
+    // Refresh 2 minutes before expiry (or immediately if already expired)
+    const refreshTime = Math.max(0, timeUntilExpiry - 2 * 60 * 1000);
+
+    console.log(
+      `Token expires in ${Math.round(timeUntilExpiry / 1000)}s, refreshing in ${Math.round(refreshTime / 1000)}s`
+    );
+
+    refreshTimerRef.current = setTimeout(async () => {
+      console.log('Auto-refreshing token...');
+      const success = await refreshToken();
+      if (success) {
+        await checkAuth();
+      }
+    }, refreshTime);
+  };
 
   const checkAuth = async () => {
     try {
@@ -38,8 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { Accept: 'application/json' },
       });
       if (res.ok) {
-        const userData = await res.json();
-        setUser(userData);
+        const data = await res.json();
+        setUser(data.user || data);
+
+        // Schedule token refresh if we have an access token
+        if (data.accessToken) {
+          scheduleTokenRefresh(data.accessToken);
+        }
       } else {
         setUser(null);
       }
@@ -61,10 +134,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const error = await res.json();
       throw new Error(error.message || 'Login failed');
     }
+    const data = await res.json();
+
+    // Schedule token refresh
+    if (data.accessToken) {
+      scheduleTokenRefresh(data.accessToken);
+    }
+
     await checkAuth();
   };
 
   const logout = async () => {
+    // Clear refresh timer
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
@@ -77,6 +162,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     checkAuth();
+
+    // Cleanup timer on unmount
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
   }, []);
 
   const value: AuthState = {

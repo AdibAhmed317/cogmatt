@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Mail, Lock, Sparkles, Github, Chrome, User } from 'lucide-react';
+import { Mail, Lock, Chrome, User } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/presentation/contexts/AuthContext';
@@ -62,8 +62,9 @@ export default function SignupPage() {
     }
   };
 
-  const handleSocialSignup = (provider: string) => {
-    alert(`${provider} signup coming soon!`);
+  const handleSocialSignup = () => {
+    // Redirect to Google OAuth endpoint
+    window.location.href = '/api/auth/google';
   };
 
   return (
@@ -78,10 +79,12 @@ export default function SignupPage() {
             className='mx-auto w-full max-w-md'
           >
             {/* Logo */}
-            <div className='mb-8 flex items-center gap-2'>
-              <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500'>
-                <Sparkles className='h-6 w-6 text-white' />
-              </div>
+            <div className='mb-8 flex items-center gap-3'>
+              <img
+                src='/logo.png'
+                alt='Cogmatt logo'
+                className='h-10 w-10 rounded-xl object-contain'
+              />
               <span className='text-2xl font-bold text-slate-900 dark:text-white'>
                 Cogmatt
               </span>
@@ -112,20 +115,11 @@ export default function SignupPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => handleSocialSignup('Google')}
+                onClick={handleSocialSignup}
                 className='flex w-full items-center justify-center gap-3 rounded-lg border-2 border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
               >
                 <Chrome className='h-5 w-5' />
                 Sign up with Google
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSocialSignup('GitHub')}
-                className='flex w-full items-center justify-center gap-3 rounded-lg border-2 border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
-              >
-                <Github className='h-5 w-5' />
-                Sign up with GitHub
               </motion.button>
             </div>
             {/* Divider */}
@@ -134,7 +128,7 @@ export default function SignupPage() {
                 <div className='w-full border-t border-slate-200 dark:border-slate-800' />
               </div>
               <div className='relative flex justify-center text-sm'>
-                <span className='bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 text-slate-500 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-400'>
+                <span className='bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 text-slate-500 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-400 rounded-full'>
                   Or sign up with email
                 </span>
               </div>
@@ -279,8 +273,12 @@ export default function SignupPage() {
         <div className='hidden lg:block lg:w-1/2'>
           <div className='flex h-full items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50 dark:from-indigo-950/20 dark:via-slate-950 dark:to-blue-950/20'>
             <div className='text-center'>
-              <div className='mb-8 flex items-center justify-center gap-2'>
-                <Sparkles className='h-10 w-10 text-indigo-500 dark:text-indigo-400' />
+              <div className='mb-8 flex items-center justify-center gap-3'>
+                <img
+                  src='/logo.png'
+                  alt='Cogmatt logo'
+                  className='h-10 w-10 rounded-xl object-contain'
+                />
                 <span className='text-3xl font-bold text-slate-900 dark:text-white'>
                   Cogmatt
                 </span>

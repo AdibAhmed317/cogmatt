@@ -14,7 +14,9 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  password: text('password').notNull(),
+  password: text('password'), // Nullable for OAuth-only users
+  googleId: text('google_id').unique(), // Google OAuth ID
+  authProvider: text('auth_provider').notNull().default('credentials'), // 'credentials' | 'google'
   role: text('role').notNull().default('user'),
   emailVerified: boolean('email_verified').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -88,6 +90,9 @@ export const socialAccounts = pgTable('social_accounts', {
   refreshToken: text('refresh_token'),
   expiresAt: timestamp('expires_at'),
   username: text('username').notNull(),
+  profileUrl: text('profile_url'),
+  profilePicture: text('profile_picture'),
+  accountId: text('account_id'), // Platform-specific account ID (e.g., Facebook Page ID)
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

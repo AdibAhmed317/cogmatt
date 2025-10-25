@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Mail, Lock, Sparkles, Github, Chrome } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, Lock, Chrome } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/presentation/contexts/AuthContext';
 
@@ -11,6 +11,28 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const auth = useAuth();
+
+  // Check for OAuth errors in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('error');
+    const reason = params.get('reason');
+    if (oauthError) {
+      const errorMessages: Record<string, string> = {
+        invalid_oauth_state: 'OAuth authentication failed. Please try again.',
+        failed_to_fetch_user: 'Failed to fetch user information from Google.',
+        oauth_failed:
+          reason === 'missing_email_scope'
+            ? 'Google did not provide your email. Ensure you allow email access.'
+            : reason === 'missing_google_id'
+              ? 'Could not read your Google account ID.'
+              : 'Google authentication failed. Please try again.',
+      };
+      setError(
+        errorMessages[oauthError] || 'An error occurred during authentication.'
+      );
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +52,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    alert(`${provider} login coming soon!`);
+  const handleSocialLogin = () => {
+    // Redirect to Google OAuth endpoint
+    window.location.href = '/api/auth/google';
   };
 
   return (
@@ -46,10 +69,12 @@ export default function LoginPage() {
             className='mx-auto w-full max-w-md'
           >
             {/* Logo */}
-            <div className='mb-8 flex items-center gap-2'>
-              <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500'>
-                <Sparkles className='h-6 w-6 text-white' />
-              </div>
+            <div className='mb-8 flex items-center gap-3'>
+              <img
+                src='/logo.png'
+                alt='Cogmatt logo'
+                className='h-10 w-10 rounded-xl object-contain'
+              />
               <span className='text-2xl font-bold text-slate-900 dark:text-white'>
                 Cogmatt
               </span>
@@ -80,20 +105,11 @@ export default function LoginPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => handleSocialLogin('Google')}
+                onClick={handleSocialLogin}
                 className='flex w-full items-center justify-center gap-3 rounded-lg border-2 border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
               >
                 <Chrome className='h-5 w-5' />
                 Continue with Google
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSocialLogin('GitHub')}
-                className='flex w-full items-center justify-center gap-3 rounded-lg border-2 border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
-              >
-                <Github className='h-5 w-5' />
-                Continue with GitHub
               </motion.button>
             </div>
             {/* Divider */}
@@ -102,7 +118,7 @@ export default function LoginPage() {
                 <div className='w-full border-t border-slate-200 dark:border-slate-800' />
               </div>
               <div className='relative flex justify-center text-sm'>
-                <span className='bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 text-slate-500 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-400'>
+                <span className='bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 text-slate-500 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-400 rounded-full'>
                   Or continue with email
                 </span>
               </div>

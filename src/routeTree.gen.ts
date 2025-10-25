@@ -23,6 +23,7 @@ import { Route as DashboardPostsRouteImport } from './routes/dashboard/posts'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard/analytics'
 import { Route as DashboardAiRouteImport } from './routes/dashboard/ai'
 import { Route as ApiUserRouteImport } from './routes/api/user'
+import { Route as ApiSocialAccountsRouteImport } from './routes/api/social-accounts'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 
 const UserRoute = UserRouteImport.update({
@@ -95,6 +96,11 @@ const ApiUserRoute = ApiUserRouteImport.update({
   path: '/api/user',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSocialAccountsRoute = ApiSocialAccountsRouteImport.update({
+  id: '/api/social-accounts',
+  path: '/api/social-accounts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthRoute = ApiAuthRouteImport.update({
   id: '/api/auth',
   path: '/api/auth',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/user': typeof UserRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/social-accounts': typeof ApiSocialAccountsRoute
   '/api/user': typeof ApiUserRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/user': typeof UserRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/social-accounts': typeof ApiSocialAccountsRoute
   '/api/user': typeof ApiUserRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/user': typeof UserRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/social-accounts': typeof ApiSocialAccountsRoute
   '/api/user': typeof ApiUserRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/user'
     | '/api/auth'
+    | '/api/social-accounts'
     | '/api/user'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/user'
     | '/api/auth'
+    | '/api/social-accounts'
     | '/api/user'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/user'
     | '/api/auth'
+    | '/api/social-accounts'
     | '/api/user'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -214,6 +226,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   UserRoute: typeof UserRoute
   ApiAuthRoute: typeof ApiAuthRoute
+  ApiSocialAccountsRoute: typeof ApiSocialAccountsRoute
   ApiUserRoute: typeof ApiUserRoute
 }
 
@@ -317,6 +330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUserRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/social-accounts': {
+      id: '/api/social-accounts'
+      path: '/api/social-accounts'
+      fullPath: '/api/social-accounts'
+      preLoaderRoute: typeof ApiSocialAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth': {
       id: '/api/auth'
       path: '/api/auth'
@@ -358,6 +378,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   UserRoute: UserRoute,
   ApiAuthRoute: ApiAuthRoute,
+  ApiSocialAccountsRoute: ApiSocialAccountsRoute,
   ApiUserRoute: ApiUserRoute,
 }
 export const routeTree = rootRouteImport

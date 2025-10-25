@@ -61,6 +61,18 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
+    // Check if user registered with Google and has no password
+    if (!user.password && user.authProvider === 'google') {
+      throw new Error(
+        'Password not set. Please login with Google or set a password in settings.'
+      );
+    }
+
+    // Check if user has no password set
+    if (!user.password) {
+      throw new Error('Password not set. Please set a password in settings.');
+    }
+
     // Verify password
     const isPasswordValid = await this.authRepo.VerifyPassword(
       password,
@@ -91,6 +103,69 @@ export class AuthService {
       email: user.email,
       role: user.role,
     };
+  }
+
+  async GoogleLogin(
+    googleId: string,
+    email: string,
+    name: string
+  ): Promise<AuthResponseDTO> {
+    // Find or create user with Google account
+    const user = await this.authRepo.FindOrCreateGoogleUser(
+      googleId,
+      email,
+      name
+    );
+
+    // Generate tokens
+    const accessToken = this.generateAccessToken(
+      user.id,
+      user.email,
+      user.role
+    );
+    const refreshToken = this.generateRefreshToken(user.id);
+
+    // Save refresh token to database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+    await this.authRepo.SaveRefreshToken(user.id, refreshToken, expiresAt);
+
+    return {
+      accessToken,
+      refreshToken,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+  }
+
+  async SetPassword(
+    userId: string,
+    newPassword: string,
+    currentPassword?: string
+  ): Promise<void> {
+    // basic validation
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
+
+    const user = await this.authRepo.FindById(userId);
+    if (!user) throw new Error('User not found');
+
+    // If user already has a password set, require current password to match
+    if (user.password) {
+      if (!currentPassword) {
+        throw new Error('Current password is required');
+      }
+      const ok = await this.authRepo.VerifyPassword(
+        currentPassword,
+        user.password
+      );
+      if (!ok) throw new Error('Current password is incorrect');
+    }
+
+    await this.authRepo.UpdatePassword(userId, newPassword);
   }
 
   async RefreshToken(refreshToken: string): Promise<AuthResponseDTO> {
