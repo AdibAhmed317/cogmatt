@@ -55,13 +55,14 @@ export class SocialAccountService {
   // Generate Facebook OAuth URL
   generateFacebookAuthUrl(agencyId: string): string {
     const state = this.generateState(agencyId);
+    // Request a minimal set of scopes first. Additional scopes (pages_read_engagement,
+    // pages_manage_engagement, instagram_basic, instagram_content_publish) require
+    // advanced access & App Review. Add them conditionally later when the app is approved.
     const scope = [
+      'public_profile',
+      'email',
       'pages_show_list',
-      'pages_read_engagement',
       'pages_manage_posts',
-      'pages_manage_engagement',
-      'instagram_basic',
-      'instagram_content_publish',
     ].join(',');
 
     const params = new URLSearchParams({

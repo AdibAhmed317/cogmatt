@@ -38,21 +38,40 @@ export default function SettingsPage() {
   const [connecting, setConnecting] = useState(false);
   const [pages, setPages] = useState<FacebookPage[]>([]);
   const [showPageSelector, setShowPageSelector] = useState(false);
+  const { user } = useAuth();
   const [agencyId, setAgencyId] = useState<string>('');
 
   // Load connected accounts
+  // Resolve agency first, then load accounts
   useEffect(() => {
-    loadAccounts();
-  }, []);
+    const init = async () => {
+      if (!user?.userId) return; // wait for auth
+      if (!agencyId) {
+        try {
+          const res = await fetch(`/api/agency/me?ownerId=${user.userId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setAgencyId(data.agencyId);
+          }
+        } catch (e) {
+          console.error('Failed to resolve agency', e);
+        }
+      }
+    };
+    init();
+  }, [user?.userId, agencyId]);
+
+  useEffect(() => {
+    if (agencyId) {
+      loadAccounts();
+    }
+  }, [agencyId]);
 
   const loadAccounts = async () => {
+    if (!agencyId) return;
     try {
       setLoadingAccounts(true);
-      // TODO: Get actual agencyId from auth context
-      const tempAgencyId = 'temp-agency-id'; // Replace with actual agency ID
-      setAgencyId(tempAgencyId);
-
-      const response = await fetch(`/api/social-accounts/${tempAgencyId}`);
+      const response = await fetch(`/api/social-accounts/${agencyId}`);
       if (response.ok) {
         const data = await response.json();
         setAccounts(data);
@@ -69,6 +88,10 @@ export default function SettingsPage() {
       setConnecting(true);
 
       // Get auth URL
+      if (!agencyId) {
+        alert('Agency not ready yet');
+        return;
+      }
       const response = await fetch(
         `/api/social-accounts/facebook/auth?agencyId=${agencyId}`
       );
