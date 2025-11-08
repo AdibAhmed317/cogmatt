@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UserRouteImport } from './routes/user'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -25,15 +27,26 @@ import { Route as DashboardAiRouteImport } from './routes/dashboard/ai'
 import { Route as ApiUserRouteImport } from './routes/api/user'
 import { Route as ApiSocialAccountsRouteImport } from './routes/api/social-accounts'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
+import { Route as ApiAgencyRouteImport } from './routes/api/agency'
 
 const UserRoute = UserRouteImport.update({
   id: '/user',
   path: '/user',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -106,6 +119,11 @@ const ApiAuthRoute = ApiAuthRouteImport.update({
   path: '/api/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgencyRoute = ApiAgencyRouteImport.update({
+  id: '/api/agency',
+  path: '/api/agency',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -113,8 +131,11 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/user': typeof UserRoute
+  '/api/agency': typeof ApiAgencyRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/social-accounts': typeof ApiSocialAccountsRoute
   '/api/user': typeof ApiUserRoute
@@ -130,8 +151,11 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/user': typeof UserRoute
+  '/api/agency': typeof ApiAgencyRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/social-accounts': typeof ApiSocialAccountsRoute
   '/api/user': typeof ApiUserRoute
@@ -149,8 +173,11 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/user': typeof UserRoute
+  '/api/agency': typeof ApiAgencyRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/social-accounts': typeof ApiSocialAccountsRoute
   '/api/user': typeof ApiUserRoute
@@ -169,8 +196,11 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/pricing'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/user'
+    | '/api/agency'
     | '/api/auth'
     | '/api/social-accounts'
     | '/api/user'
@@ -186,8 +216,11 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/pricing'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/user'
+    | '/api/agency'
     | '/api/auth'
     | '/api/social-accounts'
     | '/api/user'
@@ -204,8 +237,11 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/pricing'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/user'
+    | '/api/agency'
     | '/api/auth'
     | '/api/social-accounts'
     | '/api/user'
@@ -223,8 +259,11 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
+  TermsRoute: typeof TermsRoute
   UserRoute: typeof UserRoute
+  ApiAgencyRoute: typeof ApiAgencyRoute
   ApiAuthRoute: typeof ApiAuthRoute
   ApiSocialAccountsRoute: typeof ApiSocialAccountsRoute
   ApiUserRoute: typeof ApiUserRoute
@@ -239,11 +278,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UserRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -344,6 +397,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agency': {
+      id: '/api/agency'
+      path: '/api/agency'
+      fullPath: '/api/agency'
+      preLoaderRoute: typeof ApiAgencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -375,8 +435,11 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
+  TermsRoute: TermsRoute,
   UserRoute: UserRoute,
+  ApiAgencyRoute: ApiAgencyRoute,
   ApiAuthRoute: ApiAuthRoute,
   ApiSocialAccountsRoute: ApiSocialAccountsRoute,
   ApiUserRoute: ApiUserRoute,

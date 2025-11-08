@@ -96,6 +96,9 @@ export class SocialAccountRepository implements ISocialAccountRepository {
         username: socialAccounts.username,
         createdAt: socialAccounts.createdAt,
         updatedAt: socialAccounts.updatedAt,
+        profileUrl: socialAccounts.profileUrl,
+        profilePicture: socialAccounts.profilePicture,
+        accountId: socialAccounts.accountId,
       })
       .from(socialAccounts)
       .leftJoin(platforms, eq(socialAccounts.platformId, platforms.id))
@@ -113,7 +116,10 @@ export class SocialAccountRepository implements ISocialAccountRepository {
           account.username,
           account.createdAt,
           account.updatedAt,
-          account.platformName || undefined
+          account.platformName || undefined,
+          account.profileUrl || null,
+          account.profilePicture || null,
+          account.accountId || null
         )
     );
   }

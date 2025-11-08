@@ -10,6 +10,7 @@ interface SocialAccount {
   profileUrl?: string;
   isExpired: boolean;
   createdAt: string;
+  accountId?: string;
 }
 
 interface FacebookPage {
@@ -120,6 +121,9 @@ export default function SettingsPage() {
           setShowPageSelector(true);
           setAgencyId(event.data.agencyId);
           popup?.close();
+          // Reload accounts to show the newly connected Facebook account
+          await loadAccounts();
+          setConnecting(false);
         } else if (event.data.type === 'FACEBOOK_AUTH_ERROR') {
           console.error('Facebook auth error:', event.data.error);
           alert(`Authentication failed: ${event.data.error}`);
@@ -389,88 +393,144 @@ export default function SettingsPage() {
 
           {/* Accounts List */}
           <div className='space-y-3'>
-            {loadingAccounts ? (
-              <div className='flex items-center justify-center py-8'>
-                <Loader2 className='h-6 w-6 animate-spin text-indigo-600' />
-              </div>
-            ) : (
-              <>
-                {/* Show connected Facebook accounts */}
-                {accounts
-                  .filter((acc) => acc.platformName === 'Facebook')
-                  .map((account) => (
-                    <div
-                      key={account.id}
-                      className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'
-                    >
+            {/* Always show Facebook section */}
+            <div className='mb-4'>
+              <p className='font-bold text-lg text-slate-900 dark:text-white mb-2'>
+                Facebook
+              </p>
+              {loadingAccounts ? (
+                <div className='flex items-center justify-center py-8'>
+                  <Loader2 className='h-6 w-6 animate-spin text-indigo-600' />
+                </div>
+              ) : (
+                <>
+                  {/* Show Facebook Connect button if no Facebook user or page is present */}
+                  {accounts.filter((acc) => acc.platformName === 'Facebook')
+                    .length === 0 && (
+                    <div className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'>
                       <div>
                         <p className='font-medium text-slate-900 dark:text-white'>
-                          Facebook
-                        </p>
-                        <p className='text-sm text-slate-600 dark:text-slate-400'>
-                          {account.username}
+                          Connect your Facebook account to manage Pages and
+                          post.
                         </p>
                       </div>
                       <button
-                        onClick={() => handleDisconnect(account.id)}
-                        className='rounded-lg px-4 py-2 font-medium bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                        onClick={handleConnectFacebook}
+                        disabled={connecting}
+                        className='rounded-lg px-4 py-2 font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2'
                       >
-                        Disconnect
+                        {connecting ? (
+                          <>
+                            <Loader2 className='h-4 w-4 animate-spin' />
+                            Connecting...
+                          </>
+                        ) : (
+                          'Connect'
+                        )}
                       </button>
                     </div>
-                  ))}
+                  )}
 
-                {/* Show Facebook connect button if not connected */}
-                {!accounts.some((acc) => acc.platformName === 'Facebook') && (
-                  <div className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'>
-                    <div>
-                      <p className='font-medium text-slate-900 dark:text-white'>
-                        Facebook
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleConnectFacebook}
-                      disabled={connecting}
-                      className='rounded-lg px-4 py-2 font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2'
-                    >
-                      {connecting ? (
-                        <>
-                          <Loader2 className='h-4 w-4 animate-spin' />
-                          Connecting...
-                        </>
-                      ) : (
-                        'Connect'
-                      )}
-                    </button>
-                  </div>
-                )}
+                  {/* Show connected Facebook user (always if any Facebook account is present) */}
+                  {accounts
+                    .filter((acc) => acc.platformName === 'Facebook')
+                    .map((fbUser) => (
+                      <div
+                        key={fbUser.id}
+                        className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'
+                      >
+                        <div className='flex items-center gap-3'>
+                          {fbUser.profilePicture && (
+                            <img
+                              src={fbUser.profilePicture}
+                              alt={fbUser.username}
+                              className='h-10 w-10 rounded-full'
+                            />
+                          )}
+                          <div>
+                            <p className='font-medium text-slate-900 dark:text-white'>
+                              Facebook User
+                            </p>
+                            <p className='text-sm text-slate-600 dark:text-slate-400'>
+                              {fbUser.username}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDisconnect(fbUser.id)}
+                          className='rounded-lg px-4 py-2 font-medium bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    ))}
 
-                {/* Placeholder for other platforms (mock for now) */}
-                {[
-                  { name: 'Twitter', connected: false },
-                  { name: 'Instagram', connected: false },
-                  { name: 'LinkedIn', connected: false },
-                  { name: 'TikTok', connected: false },
-                ].map((platform, idx) => (
-                  <div
-                    key={idx}
-                    className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'
-                  >
-                    <div>
-                      <p className='font-medium text-slate-900 dark:text-white'>
-                        {platform.name}
-                      </p>
-                    </div>
-                    <button
-                      disabled
-                      className='rounded-lg px-4 py-2 font-medium bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
-                    >
-                      Coming Soon
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
+                  {/* Show connected Facebook Pages */}
+                  {accounts
+                    .filter(
+                      (acc) =>
+                        acc.platformName === 'Facebook' &&
+                        acc.accountId &&
+                        acc.accountId.length >= 20
+                    )
+                    .map((page) => (
+                      <div
+                        key={page.id}
+                        className='flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-800/30'
+                      >
+                        <div className='flex items-center gap-3'>
+                          {page.profilePicture && (
+                            <img
+                              src={page.profilePicture}
+                              alt={page.username}
+                              className='h-10 w-10 rounded-full'
+                            />
+                          )}
+                          <div>
+                            <p className='font-medium text-blue-900 dark:text-blue-200'>
+                              Facebook Page
+                            </p>
+                            <p className='text-sm text-blue-700 dark:text-blue-300'>
+                              {page.username}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDisconnect(page.id)}
+                          className='rounded-lg px-4 py-2 font-medium bg-blue-200 text-blue-700 hover:bg-blue-300 dark:bg-blue-700 dark:text-blue-300 dark:hover:bg-blue-600'
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    ))}
+                </>
+              )}
+            </div>
+
+            {/* Placeholder for other platforms (mock for now) */}
+            {[
+              { name: 'Twitter', connected: false },
+              { name: 'Instagram', connected: false },
+              { name: 'LinkedIn', connected: false },
+              { name: 'TikTok', connected: false },
+            ].map((platform, idx) => (
+              <div
+                key={idx}
+                className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'
+              >
+                <div>
+                  <p className='font-medium text-slate-900 dark:text-white'>
+                    {platform.name}
+                  </p>
+                </div>
+                <button
+                  disabled
+                  className='rounded-lg px-4 py-2 font-medium bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
+                >
+                  Coming Soon
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 

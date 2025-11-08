@@ -32,8 +32,60 @@ export class SocialAccountController {
       this.connectFacebookPage(c)
     );
 
+    // Post to Facebook Page
+    this.router.post('/facebook/post-page', (c) => this.postToFacebookPage(c));
+
     // Disconnect account
     this.router.delete('/:accountId', (c) => this.disconnectAccount(c));
+  }
+
+  // POST /api/social-accounts/facebook/post-page
+  async postToFacebookPage(c: Context) {
+    try {
+      const body = await c.req.json();
+      const { agencyId, pageId, message } = body;
+
+      if (!agencyId || !pageId || !message) {
+        return c.json(
+          { error: 'Missing required fields: agencyId, pageId, message' },
+          400
+        );
+      }
+
+      // Get the connected account for this agency and page
+      const accounts =
+        await this.socialAccountService.getConnectedAccounts(agencyId);
+      const pageAccount = accounts.find(
+        (acc) => acc.platformName === 'Facebook' && acc.accountId === pageId
+      );
+      if (!pageAccount) {
+        return c.json({ error: 'Facebook Page not connected' }, 404);
+      }
+
+      // Post to Facebook Page using Graph API
+      const response = await fetch(
+        `https://graph.facebook.com/v18.0/${pageId}/feed`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            access_token: pageAccount.accessToken,
+          }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        return c.json(
+          { error: result.error?.message || 'Failed to post to Facebook Page' },
+          500
+        );
+      }
+      return c.json({ success: true, postId: result.id });
+    } catch (error) {
+      console.error('Error posting to Facebook page:', error);
+      return c.json({ error: 'Failed to post to Facebook page' }, 500);
+    }
   }
 
   // GET /api/social-accounts/platforms

@@ -53,6 +53,12 @@ const Navbar = () => {
               Pricing
             </a>
             <a
+              href='/terms'
+              className='text-sm font-medium text-slate-600 transition-colors hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400'
+            >
+              Terms
+            </a>
+            <a
               href='/login'
               className='text-sm font-medium text-slate-600 transition-colors hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400'
             >

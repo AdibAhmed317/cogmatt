@@ -55,15 +55,8 @@ export class SocialAccountService {
   // Generate Facebook OAuth URL
   generateFacebookAuthUrl(agencyId: string): string {
     const state = this.generateState(agencyId);
-    // Request a minimal set of scopes first. Additional scopes (pages_read_engagement,
-    // pages_manage_engagement, instagram_basic, instagram_content_publish) require
-    // advanced access & App Review. Add them conditionally later when the app is approved.
-    const scope = [
-      'public_profile',
-      'email',
-      'pages_show_list',
-      'pages_manage_posts',
-    ].join(',');
+    // Request only valid, approved scopes. Advanced permissions require App Review.
+    const scope = ['public_profile', 'email'].join(',');
 
     const params = new URLSearchParams({
       client_id: this.facebookAppId,
@@ -172,8 +165,61 @@ export class SocialAccountService {
       // Exchange code for token
       const tokenData = await this.exchangeCodeForToken(code);
 
+      // Get user profile
+      const userData = await this.getFacebookUserData(tokenData.access_token);
+
+      // Save user profile as a connected account
+      let platform =
+        await this.socialAccountRepository.getPlatformByName('Facebook');
+      if (!platform) {
+        platform = await this.socialAccountRepository.createPlatform(
+          'Facebook',
+          'https://graph.facebook.com/v18.0'
+        );
+      }
+      // Check if user account already exists
+      const existingAccounts =
+        await this.socialAccountRepository.getSocialAccountsByAgencyId(
+          stateData.agencyId
+        );
+      const userAccount = existingAccounts.find(
+        (acc) => acc.platformId === platform.id && acc.accountId === userData.id
+      );
+      if (!userAccount) {
+        await this.socialAccountRepository.createSocialAccount(
+          stateData.agencyId,
+          platform.id,
+          tokenData.access_token,
+          null,
+          null,
+          userData.name,
+          `https://www.facebook.com/${userData.id}`,
+          userData.picture?.data?.url,
+          userData.id
+        );
+      } else {
+        await this.socialAccountRepository.updateSocialAccountTokens(
+          userAccount.id,
+          tokenData.access_token,
+          null,
+          null
+        );
+      }
+
       // Get pages
       const pages = await this.getFacebookPages(tokenData.access_token);
+      console.log('Facebook /me/accounts response:', pages);
+
+      // Save all pages as connected accounts
+      for (const page of pages) {
+        await this.saveFacebookPage(
+          stateData.agencyId,
+          page.id,
+          page.name,
+          page.access_token,
+          page.picture?.data?.url
+        );
+      }
 
       return {
         success: true,
@@ -208,25 +254,23 @@ export class SocialAccountService {
       );
     }
 
-    // Check if account already exists
+    // Check if account for this page already exists
     const existingAccount =
-      await this.socialAccountRepository.getSocialAccountByPlatformAndAgency(
-        agencyId,
-        platform.id
-      );
-
-    if (existingAccount) {
-      // Update existing account
+      await this.socialAccountRepository.getSocialAccountsByAgencyId(agencyId);
+    const pageAccount = existingAccount.find(
+      (acc) => acc.platformId === platform.id && acc.accountId === pageId
+    );
+    if (pageAccount) {
+      // Update token for this page
       await this.socialAccountRepository.updateSocialAccountTokens(
-        existingAccount.id,
+        pageAccount.id,
         pageAccessToken,
         null,
-        null // Facebook page tokens don't expire
+        null
       );
-      return existingAccount;
+      return pageAccount;
     }
-
-    // Create new account
+    // Create new account for this page
     return await this.socialAccountRepository.createSocialAccount(
       agencyId,
       platform.id,
