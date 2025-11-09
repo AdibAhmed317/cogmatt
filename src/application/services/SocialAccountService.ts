@@ -56,7 +56,15 @@ export class SocialAccountService {
   generateFacebookAuthUrl(agencyId: string): string {
     const state = this.generateState(agencyId);
     // Request only valid, approved scopes. Advanced permissions require App Review.
-    const scope = ['public_profile', 'email'].join(',');
+    // For Pages access during development we request pages-related scopes.
+    // NOTE: pages_* scopes require App Review before non-role users can grant them.
+    const scope = [
+      'public_profile',
+      'email',
+      'pages_show_list',
+      'pages_read_engagement',
+      'pages_manage_posts',
+    ].join(',');
 
     const params = new URLSearchParams({
       client_id: this.facebookAppId,
@@ -116,6 +124,29 @@ export class SocialAccountService {
     return await response.json();
   }
 
+  // Exchange a short-lived user token for a long-lived token
+  async exchangeShortLivedForLongLived(
+    shortLivedToken: string
+  ): Promise<FacebookTokenResponse> {
+    const params = new URLSearchParams({
+      grant_type: 'fb_exchange_token',
+      client_id: this.facebookAppId,
+      client_secret: this.facebookAppSecret,
+      fb_exchange_token: shortLivedToken,
+    });
+
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/oauth/access_token?${params.toString()}`
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to exchange for long-lived token: ${error}`);
+    }
+
+    return await response.json();
+  }
+
   // Get user data from Facebook
   async getFacebookUserData(accessToken: string): Promise<FacebookUserData> {
     const response = await fetch(
@@ -162,11 +193,29 @@ export class SocialAccountService {
         return { success: false, error: 'Invalid or expired state parameter' };
       }
 
-      // Exchange code for token
+      // Exchange code for token (short-lived)
       const tokenData = await this.exchangeCodeForToken(code);
 
+      // Exchange short-lived user token for a long-lived token
+      let longLivedTokenData: FacebookTokenResponse | null = null;
+      try {
+        longLivedTokenData = await this.exchangeShortLivedForLongLived(
+          tokenData.access_token
+        );
+      } catch (err) {
+        // Log and fall back to short-lived token (still try to proceed)
+        console.warn(
+          'Failed to exchange for long-lived token, using short-lived token',
+          err
+        );
+        longLivedTokenData = tokenData;
+      }
+
+      const userAccessToken = longLivedTokenData.access_token;
+      const expiresIn = longLivedTokenData.expires_in;
+
       // Get user profile
-      const userData = await this.getFacebookUserData(tokenData.access_token);
+      const userData = await this.getFacebookUserData(userAccessToken);
 
       // Save user profile as a connected account
       let platform =
@@ -185,13 +234,18 @@ export class SocialAccountService {
       const userAccount = existingAccounts.find(
         (acc) => acc.platformId === platform.id && acc.accountId === userData.id
       );
+
+      const expiresAt = expiresIn
+        ? new Date(Date.now() + expiresIn * 1000)
+        : null;
+
       if (!userAccount) {
         await this.socialAccountRepository.createSocialAccount(
           stateData.agencyId,
           platform.id,
-          tokenData.access_token,
+          userAccessToken,
           null,
-          null,
+          expiresAt,
           userData.name,
           `https://www.facebook.com/${userData.id}`,
           userData.picture?.data?.url,
@@ -200,14 +254,14 @@ export class SocialAccountService {
       } else {
         await this.socialAccountRepository.updateSocialAccountTokens(
           userAccount.id,
-          tokenData.access_token,
+          userAccessToken,
           null,
-          null
+          expiresAt
         );
       }
 
-      // Get pages
-      const pages = await this.getFacebookPages(tokenData.access_token);
+      // Get pages using the long-lived user token
+      const pages = await this.getFacebookPages(userAccessToken);
       console.log('Facebook /me/accounts response:', pages);
 
       // Save all pages as connected accounts
