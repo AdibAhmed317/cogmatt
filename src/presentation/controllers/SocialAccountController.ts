@@ -32,6 +32,17 @@ export class SocialAccountController {
       this.connectFacebookPage(c)
     );
 
+    // Resync pages for an agency (one-off/admin)
+    this.router.post('/facebook/resync', (c) => this.resyncFacebookPages(c));
+
+    // Fix accountId for existing accounts
+    this.router.post('/facebook/fix-account-ids', (c) =>
+      this.fixFacebookAccountIds(c)
+    );
+
+    // Cleanup user accounts (delete accounts without accountId)
+    this.router.post('/facebook/cleanup', (c) => this.cleanupUserAccounts(c));
+
     // Post to Facebook Page
     this.router.post('/facebook/post-page', (c) => this.postToFacebookPage(c));
 
@@ -273,6 +284,105 @@ export class SocialAccountController {
     } catch (error) {
       console.error('Error connecting Facebook page:', error);
       return c.json({ error: 'Failed to connect Facebook page' }, 500);
+    }
+  }
+
+  // POST /api/social-accounts/facebook/resync
+  async resyncFacebookPages(c: Context) {
+    try {
+      const body = await c.req.json();
+      const agencyId = body?.agencyId || c.req.query('agencyId');
+      if (!agencyId) {
+        return c.json({ error: 'Agency ID is required' }, 400);
+      }
+
+      const result =
+        await this.socialAccountService.resyncFacebookPages(agencyId);
+
+      if (!result.success) {
+        return c.json({ error: result.error || 'Resync failed' }, 500);
+      }
+
+      return c.json({
+        success: true,
+        created: result.created,
+        updated: result.updated,
+        pages: result.pages,
+      });
+    } catch (error) {
+      console.error('Error resyncing Facebook pages:', error);
+      return c.json({ error: 'Failed to resync Facebook pages' }, 500);
+    }
+  }
+
+  // POST /api/social-accounts/facebook/fix-account-ids
+  // This fixes existing accounts that have wrong accountId values
+  async fixFacebookAccountIds(c: Context) {
+    try {
+      const body = await c.req.json();
+      const agencyId = body?.agencyId || c.req.query('agencyId');
+      if (!agencyId) {
+        return c.json({ error: 'Agency ID is required' }, 400);
+      }
+
+      const result =
+        await this.socialAccountService.fixFacebookAccountIds(agencyId);
+
+      if (!result.success) {
+        return c.json({ error: result.errors.join(', ') || 'Fix failed' }, 500);
+      }
+
+      return c.json({
+        success: true,
+        fixed: result.fixed,
+        errors: result.errors,
+        message: `Fixed ${result.fixed} accounts. They should now work correctly.`,
+      });
+    } catch (error) {
+      console.error('Error fixing Facebook account IDs:', error);
+      return c.json({ error: 'Failed to fix account IDs' }, 500);
+    }
+  }
+
+  // POST /api/social-accounts/facebook/cleanup-user-accounts
+  // Delete Facebook user accounts, keep only pages
+  async cleanupUserAccounts(c: Context) {
+    try {
+      const body = await c.req.json();
+      const agencyId = body?.agencyId || c.req.query('agencyId');
+      if (!agencyId) {
+        return c.json({ error: 'Agency ID is required' }, 400);
+      }
+
+      const accounts =
+        await this.socialAccountService.getConnectedAccounts(agencyId);
+      const fbAccounts = accounts.filter((a) => a.platformName === 'Facebook');
+
+      let deleted = 0;
+      const kept = [];
+
+      for (const account of fbAccounts) {
+        // If no accountId, it's a user account - delete it
+        if (!account.accountId || account.accountId.trim() === '') {
+          await this.socialAccountService.disconnectAccount(account.id);
+          deleted++;
+        } else {
+          kept.push({
+            username: account.username,
+            accountId: account.accountId,
+          });
+        }
+      }
+
+      return c.json({
+        success: true,
+        deleted,
+        kept,
+        message: `Deleted ${deleted} user accounts, kept ${kept.length} pages`,
+      });
+    } catch (error) {
+      console.error('Error cleaning up user accounts:', error);
+      return c.json({ error: 'Failed to cleanup accounts' }, 500);
     }
   }
 

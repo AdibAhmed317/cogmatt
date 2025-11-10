@@ -46,7 +46,7 @@ const LandingPage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className='flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-blue-500 px-8 py-4 font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:shadow-xl hover:shadow-indigo-500/40'
+                className='flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-blue-500 px-8 py-4 font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:shadow-xl hover:shadow-indigo-500/40 hover:cursor-pointer'
                 onClick={() => navigate({ to: '/login' })}
               >
                 Get Started
@@ -56,20 +56,11 @@ const LandingPage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className='flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-teal-500 px-8 py-4 font-semibold text-white shadow-lg shadow-green-500/30 transition-all hover:shadow-xl hover:shadow-green-500/40'
+                className='flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-teal-500 px-8 py-4 font-semibold text-white shadow-lg shadow-green-500/30 transition-all hover:shadow-xl hover:shadow-green-500/40 hover:cursor-pointer'
                 onClick={() => navigate({ to: '/signup' })}
               >
                 Sign Up
                 <ArrowRight className='h-5 w-5' />
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className='rounded-lg border-2 border-slate-300 bg-white px-8 py-4 font-semibold text-slate-700 transition-all hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-indigo-700'
-                onClick={() => navigate({ to: '/user' })}
-              >
-                View API Demo
               </motion.button>
             </div>
 

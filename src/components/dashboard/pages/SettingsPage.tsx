@@ -13,19 +13,18 @@ interface SocialAccount {
   accountId?: string;
 }
 
-interface FacebookPage {
-  id: string;
-  name: string;
-  access_token: string;
-  picture?: {
-    data: {
-      url: string;
-    };
-  };
-}
-
 export default function SettingsPage() {
-  const { checkAuth } = useAuth();
+  const { checkAuth, user } = useAuth();
+
+  // Profile state
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profileBio, setProfileBio] = useState('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<string | null>(null);
+  const [profileErr, setProfileErr] = useState<string | null>(null);
+
+  // Password state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -37,10 +36,16 @@ export default function SettingsPage() {
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [connecting, setConnecting] = useState(false);
-  const [pages, setPages] = useState<FacebookPage[]>([]);
-  const [showPageSelector, setShowPageSelector] = useState(false);
-  const { user } = useAuth();
   const [agencyId, setAgencyId] = useState<string>('');
+
+  // Initialize profile fields from user context
+  useEffect(() => {
+    if (user) {
+      setProfileName(user.name || '');
+      setProfileEmail(user.email || '');
+      // Bio is not in User entity yet, keep empty for now
+    }
+  }, [user]);
 
   // Load connected accounts
   // Resolve agency first, then load accounts
@@ -117,11 +122,9 @@ export default function SettingsPage() {
       // Listen for callback
       const handleMessage = async (event: MessageEvent) => {
         if (event.data.type === 'FACEBOOK_AUTH_SUCCESS') {
-          setPages(event.data.pages || []);
-          setShowPageSelector(true);
+          // Backend already saved the user and pages. Reload accounts to reflect new entries.
           setAgencyId(event.data.agencyId);
           popup?.close();
-          // Reload accounts to show the newly connected Facebook account
           await loadAccounts();
           setConnecting(false);
         } else if (event.data.type === 'FACEBOOK_AUTH_ERROR') {
@@ -145,37 +148,6 @@ export default function SettingsPage() {
       console.error('Error connecting Facebook:', error);
       alert('Failed to connect Facebook account');
       setConnecting(false);
-    }
-  };
-
-  const handleSelectPage = async (page: FacebookPage) => {
-    try {
-      const response = await fetch(
-        '/api/social-accounts/facebook/connect-page',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            agencyId,
-            pageId: page.id,
-            pageName: page.name,
-            pageAccessToken: page.access_token,
-            profilePicture: page.picture?.data?.url,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        await loadAccounts();
-        setShowPageSelector(false);
-        setPages([]);
-        setConnecting(false);
-      } else {
-        throw new Error('Failed to connect page');
-      }
-    } catch (error) {
-      console.error('Error connecting page:', error);
-      alert('Failed to connect Facebook page');
     }
   };
 
@@ -237,6 +209,43 @@ export default function SettingsPage() {
       setIsUpdating(false);
     }
   };
+
+  const handleUpdateProfile = async () => {
+    setProfileMsg(null);
+    setProfileErr(null);
+
+    if (!profileName.trim() && !profileEmail.trim()) {
+      setProfileErr('Please provide at least name or email');
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: profileName.trim() || undefined,
+          email: profileEmail.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || 'Failed to update profile');
+      }
+
+      setProfileMsg(data.message || 'Profile updated successfully');
+      // Refresh auth state to get updated user info
+      await checkAuth();
+    } catch (e: any) {
+      setProfileErr(e.message || 'Failed to update profile');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
   return (
     <div className='space-y-6'>
       {/* Header */}
@@ -266,7 +275,8 @@ export default function SettingsPage() {
               </label>
               <input
                 type='text'
-                defaultValue='Alex Johnson'
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
                 className='w-full rounded-lg border border-slate-200 bg-white py-2 px-4 text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white'
               />
             </div>
@@ -276,7 +286,8 @@ export default function SettingsPage() {
               </label>
               <input
                 type='email'
-                defaultValue='alex@cogmatt.com'
+                value={profileEmail}
+                onChange={(e) => setProfileEmail(e.target.value)}
                 className='w-full rounded-lg border border-slate-200 bg-white py-2 px-4 text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white'
               />
             </div>
@@ -285,10 +296,39 @@ export default function SettingsPage() {
                 Bio
               </label>
               <textarea
-                defaultValue='Social media manager passionate about creating engaging content'
+                value={profileBio}
+                onChange={(e) => setProfileBio(e.target.value)}
                 className='w-full rounded-lg border border-slate-200 bg-white py-2 px-4 text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white min-h-24'
               />
             </div>
+
+            {/* Update Profile Button */}
+            <button
+              onClick={handleUpdateProfile}
+              disabled={isUpdatingProfile}
+              className='w-full bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+            >
+              {isUpdatingProfile ? (
+                <>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  Updating...
+                </>
+              ) : (
+                'Update Profile'
+              )}
+            </button>
+
+            {/* Success/Error Messages */}
+            {profileMsg && (
+              <div className='text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg'>
+                {profileMsg}
+              </div>
+            )}
+            {profileErr && (
+              <div className='text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg'>
+                {profileErr}
+              </div>
+            )}
           </div>
         </div>
 
@@ -350,46 +390,8 @@ export default function SettingsPage() {
             </h2>
           </div>
 
-          {/* Page Selector Modal */}
-          {showPageSelector && pages.length > 0 && (
-            <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-              <div className='bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full mx-4'>
-                <h3 className='text-lg font-bold text-slate-900 dark:text-white mb-4'>
-                  Select a Facebook Page
-                </h3>
-                <div className='space-y-2 max-h-96 overflow-y-auto'>
-                  {pages.map((page) => (
-                    <button
-                      key={page.id}
-                      onClick={() => handleSelectPage(page)}
-                      className='w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors'
-                    >
-                      {page.picture?.data?.url && (
-                        <img
-                          src={page.picture.data.url}
-                          alt={page.name}
-                          className='h-10 w-10 rounded-full'
-                        />
-                      )}
-                      <span className='font-medium text-slate-900 dark:text-white'>
-                        {page.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => {
-                    setShowPageSelector(false);
-                    setPages([]);
-                    setConnecting(false);
-                  }}
-                  className='mt-4 w-full px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Page selection is no longer handled on the client; Facebook provides the choice during OAuth.
+              We only reload accounts after successful auth so saved Pages appear in the list. */}
 
           {/* Accounts List */}
           <div className='space-y-3'>
@@ -431,78 +433,84 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {/* Show connected Facebook user (always if any Facebook account is present) */}
-                  {accounts
-                    .filter((acc) => acc.platformName === 'Facebook')
-                    .map((fbUser) => (
-                      <div
-                        key={fbUser.id}
-                        className='flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50'
-                      >
-                        <div className='flex items-center gap-3'>
-                          {fbUser.profilePicture && (
-                            <img
-                              src={fbUser.profilePicture}
-                              alt={fbUser.username}
-                              className='h-10 w-10 rounded-full'
-                            />
-                          )}
-                          <div>
-                            <p className='font-medium text-slate-900 dark:text-white'>
-                              Facebook User
-                            </p>
-                            <p className='text-sm text-slate-600 dark:text-slate-400'>
-                              {fbUser.username}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleDisconnect(fbUser.id)}
-                          className='rounded-lg px-4 py-2 font-medium bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-                        >
-                          Disconnect
-                        </button>
-                      </div>
-                    ))}
+                  {/* Merge user and pages into one card (deduplicated by accountId) */}
+                  {(() => {
+                    const fbAccounts = accounts.filter(
+                      (acc) => acc.platformName === 'Facebook'
+                    );
 
-                  {/* Show connected Facebook Pages */}
-                  {accounts
-                    .filter(
-                      (acc) =>
-                        acc.platformName === 'Facebook' &&
-                        acc.accountId &&
-                        acc.accountId.length >= 20
-                    )
-                    .map((page) => (
-                      <div
-                        key={page.id}
-                        className='flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-800/30'
-                      >
-                        <div className='flex items-center gap-3'>
-                          {page.profilePicture && (
-                            <img
-                              src={page.profilePicture}
-                              alt={page.username}
-                              className='h-10 w-10 rounded-full'
-                            />
-                          )}
-                          <div>
-                            <p className='font-medium text-blue-900 dark:text-blue-200'>
-                              Facebook Page
-                            </p>
-                            <p className='text-sm text-blue-700 dark:text-blue-300'>
-                              {page.username}
-                            </p>
+                    if (fbAccounts.length === 0) return null;
+
+                    // Separate user from pages
+                    let user = fbAccounts.find((a) => !a.accountId);
+                    let pages = fbAccounts.filter((a) => a.accountId);
+
+                    // If no user found but we have accounts with accountId, treat first as user
+                    // Heuristic: user typically has multi-word name (full name) vs page (single word/brand)
+                    if (!user && pages.length > 0) {
+                      const sorted = [...pages].sort((a, b) => {
+                        const aWords = a.username.trim().split(/\s+/).length;
+                        const bWords = b.username.trim().split(/\s+/).length;
+                        if (aWords > 1 && bWords === 1) return -1;
+                        if (bWords > 1 && aWords === 1) return 1;
+                        return 0;
+                      });
+                      user = sorted[0];
+                      pages = pages.filter((p) => p.id !== user!.id);
+                    }
+
+                    // Dedupe pages by accountId
+                    const pageMap = new Map<string, (typeof pages)[0]>();
+                    for (const p of pages) {
+                      const key = p.accountId || p.username || p.id;
+                      if (!pageMap.has(key)) pageMap.set(key, p);
+                    }
+                    const uniquePages = Array.from(pageMap.values());
+
+                    // Use user or first page for profile picture
+                    const displayAccount = user || uniquePages[0];
+                    if (!displayAccount) return null;
+
+                    return (
+                      <div className='p-4 rounded-lg bg-blue-50 dark:bg-blue-800/30'>
+                        <div className='flex items-center justify-between'>
+                          <div className='flex items-center gap-3'>
+                            {displayAccount.profilePicture && (
+                              <img
+                                src={displayAccount.profilePicture}
+                                alt={displayAccount.username}
+                                className='h-10 w-10 rounded-full'
+                              />
+                            )}
+                            <div>
+                              <p className='font-medium text-blue-900 dark:text-blue-200'>
+                                Facebook Account
+                              </p>
+                              {user && (
+                                <p className='text-sm text-blue-700 dark:text-blue-300'>
+                                  User: {user.username}
+                                </p>
+                              )}
+                              {uniquePages.map((page) => (
+                                <p
+                                  key={page.id}
+                                  className='text-sm text-blue-700 dark:text-blue-300'
+                                >
+                                  Page: {page.username}
+                                </p>
+                              ))}
+                            </div>
                           </div>
+                          <button
+                            onClick={() => handleDisconnect(displayAccount.id)}
+                            className='rounded-lg px-4 py-2 font-medium bg-blue-200 text-blue-700 hover:bg-blue-300 dark:bg-blue-700 dark:text-blue-300 dark:hover:bg-blue-600'
+                          >
+                            Disconnect
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleDisconnect(page.id)}
-                          className='rounded-lg px-4 py-2 font-medium bg-blue-200 text-blue-700 hover:bg-blue-300 dark:bg-blue-700 dark:text-blue-300 dark:hover:bg-blue-600'
-                        >
-                          Disconnect
-                        </button>
                       </div>
-                    ))}
+                    );
+                  })()}
                 </>
               )}
             </div>

@@ -26,6 +26,9 @@ export class SocialAccountRepository implements ISocialAccountRepository {
         refreshToken,
         expiresAt,
         username,
+        profileUrl,
+        profilePicture,
+        accountId,
       })
       .returning();
 
@@ -57,6 +60,9 @@ export class SocialAccountRepository implements ISocialAccountRepository {
         refreshToken: socialAccounts.refreshToken,
         expiresAt: socialAccounts.expiresAt,
         username: socialAccounts.username,
+        profileUrl: socialAccounts.profileUrl,
+        profilePicture: socialAccounts.profilePicture,
+        accountId: socialAccounts.accountId,
         createdAt: socialAccounts.createdAt,
         updatedAt: socialAccounts.updatedAt,
       })
@@ -77,7 +83,10 @@ export class SocialAccountRepository implements ISocialAccountRepository {
       account.username,
       account.createdAt,
       account.updatedAt,
-      account.platformName || undefined
+      account.platformName || undefined,
+      account.profileUrl,
+      account.profilePicture,
+      account.accountId
     );
   }
 
@@ -179,6 +188,16 @@ export class SocialAccountRepository implements ISocialAccountRepository {
         accessToken,
         refreshToken,
         expiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(socialAccounts.id, id));
+  }
+
+  async updateAccountId(id: string, accountId: string | null): Promise<void> {
+    await db
+      .update(socialAccounts)
+      .set({
+        accountId,
         updatedAt: new Date(),
       })
       .where(eq(socialAccounts.id, id));

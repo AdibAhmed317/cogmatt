@@ -13,8 +13,11 @@ import { Link } from '@tanstack/react-router';
 const navLinks = [
   { name: 'Home', href: '/dashboard', icon: Home },
   { name: 'Posts', href: '/dashboard/posts', icon: FileText },
-  { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
   { name: 'AI', href: '/dashboard/ai', icon: Zap },
+  { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
+  { name: 'Website', href: '/', icon: Calendar },
+  { name: 'Automation', href: '/', icon: Calendar },
+  { name: 'Product', href: '/', icon: Calendar },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];

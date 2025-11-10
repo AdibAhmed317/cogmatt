@@ -181,6 +181,38 @@ export class AuthRepository implements IAuthRepository {
       .where(eq(users.id, userId));
   }
 
+  async UpdateProfile(
+    userId: string,
+    name?: string,
+    email?: string
+  ): Promise<User> {
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
+
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+
+    const [updatedUser] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+
+    return new User(
+      updatedUser.id,
+      updatedUser.name,
+      updatedUser.email,
+      updatedUser.password,
+      updatedUser.googleId,
+      updatedUser.authProvider,
+      updatedUser.role,
+      updatedUser.emailVerified,
+      updatedUser.createdAt,
+      updatedUser.updatedAt
+    );
+  }
+
   async VerifyPassword(
     password: string,
     hashedPassword: string

@@ -13,6 +13,7 @@ import {
 
 export interface AuthUser {
   userId: string;
+  name: string;
   email: string;
   role: string;
 }
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.error('Token refresh failed');
       setUser(null);
       return false;
     }
@@ -85,12 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Refresh 2 minutes before expiry (or immediately if already expired)
     const refreshTime = Math.max(0, timeUntilExpiry - 2 * 60 * 1000);
 
-    console.log(
-      `Token expires in ${Math.round(timeUntilExpiry / 1000)}s, refreshing in ${Math.round(refreshTime / 1000)}s`
-    );
-
     refreshTimerRef.current = setTimeout(async () => {
-      console.log('Auto-refreshing token...');
       const success = await refreshToken();
       if (success) {
         await checkAuth();

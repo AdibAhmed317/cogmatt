@@ -168,54 +168,44 @@ export class AuthController {
     this.router.get('/me', async (c) => {
       try {
         let accessToken = getCookie(c, 'accessToken');
-        console.log(
-          '[/me] accessToken from cookie:',
-          accessToken ? 'present' : 'missing'
-        );
 
         if (!accessToken) {
           // Try using refresh token to issue a new access token seamlessly
           const refreshToken = getCookie(c, 'refreshToken');
-          console.log(
-            '[/me] refreshToken from cookie:',
-            refreshToken ? 'present' : 'missing'
-          );
 
           if (refreshToken) {
             try {
-              console.log('[/me] Attempting RefreshToken...');
               const result = await this.authService.RefreshToken(refreshToken);
-              console.log(
-                '[/me] RefreshToken succeeded, new accessToken issued'
-              );
               // Set new cookies
               this.setAuthCookies(c, result.accessToken, result.refreshToken);
               // Use the new access token for payload
               accessToken = result.accessToken;
             } catch (err) {
-              console.log('[/me] RefreshToken failed:', (err as Error).message);
               // fallthrough to unauthorized
             }
           }
         }
 
         if (!accessToken) {
-          console.log(
-            '[/me] No accessToken available after refresh attempt, returning 401'
-          );
           return c.json({ message: 'Unauthorized' }, 401);
         }
 
         const payload = this.authService.verifyAccessToken(accessToken);
-        console.log('[/me] Token verified, returning user:', payload.userId);
+
+        // Fetch full user details from database
+        const userEntity = await this.authService.GetUserById(payload.userId);
+        if (!userEntity) {
+          return c.json({ message: 'User not found' }, 404);
+        }
+
         return c.json({
-          userId: payload.userId,
-          email: payload.email,
-          role: payload.role,
+          userId: userEntity.id,
+          name: userEntity.name,
+          email: userEntity.email,
+          role: userEntity.role,
           accessToken, // Include access token for scheduling refresh
         });
       } catch (err) {
-        console.log('[/me] Catch block error:', (err as Error).message);
         return c.json({ message: 'Invalid or expired token' }, 401);
       }
     });
@@ -250,6 +240,44 @@ export class AuthController {
       } catch (err) {
         return c.json(
           { message: (err as Error).message || 'Failed to update password' },
+          400
+        );
+      }
+    });
+
+    // PUT /profile - Update user profile (name, email)
+    this.router.put('/profile', async (c) => {
+      try {
+        const accessToken = getCookie(c, 'accessToken');
+        if (!accessToken) {
+          return c.json({ message: 'Unauthorized' }, 401);
+        }
+        const payload = this.authService.verifyAccessToken(accessToken);
+
+        const body = await c.req.json().catch(() => ({}));
+        const name = body?.name as string | undefined;
+        const email = body?.email as string | undefined;
+
+        if (!name && !email) {
+          return c.json(
+            { message: 'At least one field (name or email) must be provided' },
+            400
+          );
+        }
+
+        const updatedUser = await this.authService.UpdateProfile(
+          payload.userId,
+          name,
+          email
+        );
+
+        return c.json({
+          message: 'Profile updated successfully',
+          user: updatedUser,
+        });
+      } catch (err) {
+        return c.json(
+          { message: (err as Error).message || 'Failed to update profile' },
           400
         );
       }
@@ -345,21 +373,11 @@ export class AuthController {
           }
         );
 
-        console.log(
-          '[/google/callback] Userinfo response status:',
-          response.status
-        );
-
         if (!response.ok) {
-          console.log('[/google/callback] Failed to fetch userinfo');
           return c.redirect('/login?error=failed_to_fetch_user');
         }
 
         const googleUser = (await response.json()) as any;
-        console.log(
-          '[/google/callback] Google user retrieved:',
-          googleUser.email
-        );
 
         // Extract essentials with safe fallbacks
         const googleId: string | undefined = googleUser?.id || googleUser?.sub; // some endpoints return 'sub'
@@ -375,13 +393,11 @@ export class AuthController {
         }
 
         if (!googleId) {
-          console.log('[/google/callback] Missing googleId');
           return c.redirect(
             '/login?error=oauth_failed&reason=missing_google_id'
           );
         }
         if (!email) {
-          console.log('[/google/callback] Missing email');
           return c.redirect(
             '/login?error=oauth_failed&reason=missing_email_scope'
           );
@@ -390,40 +406,24 @@ export class AuthController {
           name = 'User';
         }
 
-        console.log('[/google/callback] Calling GoogleLogin with:', {
-          googleId,
-          email,
-          name,
-        });
-
         // Login or create user
         const result = await this.authService.GoogleLogin(
           googleId,
           email,
           name
         );
-        console.log(
-          '[/google/callback] GoogleLogin succeeded for user:',
-          result.id
-        );
 
         // Set auth cookies
         this.setAuthCookies(c, result.accessToken, result.refreshToken);
-        console.log('[/google/callback] Auth cookies set');
 
         // Clear OAuth cookies
         deleteCookie(c, 'google_oauth_state', { path: '/' });
         deleteCookie(c, 'google_code_verifier', { path: '/' });
 
-        console.log(
-          '[/google/callback] OAuth successful for user:',
-          result.email,
-          'redirecting to /dashboard'
-        );
         // Normal redirect; dashboard guard will tolerate initial cookie propagation delay
         return c.redirect('/dashboard', 303);
       } catch (err) {
-        console.error('Google OAuth callback error:', err);
+        console.error('Google OAuth callback error');
         const reason = encodeURIComponent((err as Error)?.message || 'unknown');
         return c.redirect(`/login?error=oauth_failed&reason=${reason}`);
       }
@@ -447,8 +447,6 @@ export class AuthController {
       path: '/',
     });
 
-    console.log('[setAuthCookies] Set accessToken cookie');
-
     // Refresh token cookie (7 days)
     setCookie(c, 'refreshToken', refreshToken, {
       httpOnly: true,
@@ -457,8 +455,6 @@ export class AuthController {
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
-
-    console.log('[setAuthCookies] Set refreshToken cookie');
   }
 
   // Helper: Clear auth cookies

@@ -3,9 +3,11 @@
 import { motion } from 'framer-motion';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/presentation/contexts/ThemeContext';
+import { useAuth } from '@/presentation/contexts/AuthContext';
 
 const Navbar = () => {
   const { theme, setTheme } = useTheme();
+  const { isAuthenticated } = useAuth();
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -84,13 +86,25 @@ const Navbar = () => {
             </motion.button>
 
             {/* CTA Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className='hidden rounded-lg bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:shadow-xl md:block'
-            >
-              Get Started
-            </motion.button>
+            {isAuthenticated ? (
+              <motion.a
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                href='/dashboard'
+                className='hidden rounded-lg bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:shadow-xl md:block'
+              >
+                Dashboard
+              </motion.a>
+            ) : (
+              <motion.a
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                href='/signup'
+                className='hidden rounded-lg bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:shadow-xl md:block'
+              >
+                Get Started
+              </motion.a>
+            )}
 
             {/* Mobile Menu Button */}
             <button className='md:hidden'>

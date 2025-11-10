@@ -231,8 +231,9 @@ export class SocialAccountService {
         await this.socialAccountRepository.getSocialAccountsByAgencyId(
           stateData.agencyId
         );
+      // User account is identified by NOT having an accountId (pages have accountId)
       const userAccount = existingAccounts.find(
-        (acc) => acc.platformId === platform.id && acc.accountId === userData.id
+        (acc) => acc.platformId === platform.id && !acc.accountId
       );
 
       const expiresAt = expiresIn
@@ -240,6 +241,7 @@ export class SocialAccountService {
         : null;
 
       if (!userAccount) {
+        // User account should NOT have accountId - only pages have accountId
         await this.socialAccountRepository.createSocialAccount(
           stateData.agencyId,
           platform.id,
@@ -249,7 +251,7 @@ export class SocialAccountService {
           userData.name,
           `https://www.facebook.com/${userData.id}`,
           userData.picture?.data?.url,
-          userData.id
+          undefined // User accounts don't have accountId
         );
       } else {
         await this.socialAccountRepository.updateSocialAccountTokens(
@@ -262,7 +264,6 @@ export class SocialAccountService {
 
       // Get pages using the long-lived user token
       const pages = await this.getFacebookPages(userAccessToken);
-      console.log('Facebook /me/accounts response:', pages);
 
       // Save all pages as connected accounts
       for (const page of pages) {
@@ -345,8 +346,179 @@ export class SocialAccountService {
     );
   }
 
+  // Resync Facebook pages for an agency using any stored Facebook user token
+  // Finds a Facebook user account (one whose access token returns /me), calls /me/accounts
+  // and upserts pages via saveFacebookPage. Returns a summary of created/updated pages.
+  async resyncFacebookPages(agencyId: string): Promise<{
+    success: boolean;
+    created: number;
+    updated: number;
+    pages?: FacebookPageData[];
+    error?: string;
+  }> {
+    try {
+      const accounts =
+        await this.socialAccountRepository.getSocialAccountsByAgencyId(
+          agencyId
+        );
+
+      // Find a candidate account that can act as the Facebook user token
+      let userAccountToken: string | null = null;
+      for (const acc of accounts) {
+        if (acc.platformName !== 'Facebook') continue;
+        try {
+          const me = await this.getFacebookUserData(acc.accessToken);
+          if (me && me.id) {
+            userAccountToken = acc.accessToken;
+            break;
+          }
+        } catch (e) {
+          // ignore and try next account
+          continue;
+        }
+      }
+
+      if (!userAccountToken) {
+        return {
+          success: false,
+          created: 0,
+          updated: 0,
+          error: 'No valid Facebook user token found for agency',
+        };
+      }
+
+      const pages = await this.getFacebookPages(userAccountToken);
+
+      let created = 0;
+      let updated = 0;
+
+      // Refresh local snapshot of accounts for lookup
+      const beforeAccounts =
+        await this.socialAccountRepository.getSocialAccountsByAgencyId(
+          agencyId
+        );
+
+      for (const page of pages) {
+        const existingPage = beforeAccounts.find(
+          (a) => a.platformName === 'Facebook' && a.accountId === page.id
+        );
+        if (existingPage) {
+          updated++;
+        } else {
+          created++;
+        }
+        // Use existing saveFacebookPage logic which will update tokens if present
+        await this.saveFacebookPage(
+          agencyId,
+          page.id,
+          page.name,
+          page.access_token,
+          page.picture?.data?.url
+        );
+      }
+
+      return { success: true, created, updated, pages };
+    } catch (error) {
+      console.error('Error resyncing Facebook pages:', error);
+      return {
+        success: false,
+        created: 0,
+        updated: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  // Fix accountId for existing Facebook accounts
+  // This identifies which accounts are users vs pages and corrects the accountId field
+  async fixFacebookAccountIds(agencyId: string): Promise<{
+    success: boolean;
+    fixed: number;
+    errors: string[];
+  }> {
+    try {
+      const accounts =
+        await this.socialAccountRepository.getSocialAccountsByAgencyId(
+          agencyId
+        );
+      const fbAccounts = accounts.filter((a) => a.platformName === 'Facebook');
+
+      let fixed = 0;
+      const errors: string[] = [];
+
+      for (const account of fbAccounts) {
+        if (!account.accountId) continue; // Already correct (user account)
+
+        try {
+          // Try to fetch page info
+          const pageRes = await fetch(
+            `https://graph.facebook.com/v18.0/${account.accountId}?fields=id,name&access_token=${account.accessToken}`
+          );
+          const pageData = await pageRes.json();
+
+          // If error or if the response indicates it's not a page, it's a user account
+          if (pageData.error || !pageData.name) {
+            // This is a user account - remove accountId
+            await (this.socialAccountRepository as any).updateAccountId(
+              account.id,
+              null
+            );
+            console.log(
+              `Fixed ${account.username}: removed accountId (user account)`
+            );
+            fixed++;
+          }
+          // else: it's a valid page, keep accountId as is
+        } catch (error) {
+          errors.push(
+            `Error checking ${account.username}: ${(error as Error).message}`
+          );
+        }
+      }
+
+      return { success: true, fixed, errors };
+    } catch (error) {
+      return {
+        success: false,
+        fixed: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+      };
+    }
+  }
+
   // Disconnect account
   async disconnectAccount(accountId: string): Promise<void> {
+    // Attempt to determine if this account is a Facebook "user" account.
+    // If it is, also remove all Facebook page accounts for the same agency.
+    const account =
+      await this.socialAccountRepository.getSocialAccountById(accountId);
+    if (!account) return;
+
+    // Only treat the account as a Facebook "user" token (which should remove all
+    // Facebook accounts for the agency) when the stored record has no accountId.
+    // Page records have an accountId and should only delete the single page.
+    if (account.platformName === 'Facebook' && !account.accountId) {
+      try {
+        // Verify token is valid for a user
+        const me = await this.getFacebookUserData(account.accessToken);
+        if (me && me.id) {
+          const all =
+            await this.socialAccountRepository.getSocialAccountsByAgencyId(
+              account.agencyId
+            );
+          for (const a of all) {
+            if (a.platformName === 'Facebook') {
+              await this.socialAccountRepository.deleteSocialAccount(a.id);
+            }
+          }
+          return;
+        }
+      } catch (e) {
+        // If verification fails, fall back to deleting single account below
+      }
+    }
+
+    // Default: delete only the requested account
     await this.socialAccountRepository.deleteSocialAccount(accountId);
   }
 

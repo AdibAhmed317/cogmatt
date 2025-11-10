@@ -3,6 +3,7 @@
 
 import { AuthRepository } from '@/infrastructure/repositories/AuthRepository';
 import { AuthResponseDTO } from '../dtos/AuthDTO';
+import { User } from '@/domain/entities/UserEntity';
 import jwt from 'jsonwebtoken';
 
 export class AuthService {
@@ -225,6 +226,32 @@ export class AuthService {
 
   async LogoutAll(userId: string): Promise<void> {
     await this.authRepo.DeleteAllUserRefreshTokens(userId);
+  }
+
+  async GetUserById(userId: string): Promise<User | null> {
+    return await this.authRepo.FindById(userId);
+  }
+
+  async UpdateProfile(
+    userId: string,
+    name?: string,
+    email?: string
+  ): Promise<{ id: string; name: string; email: string }> {
+    // If email is being changed, check if it's already in use
+    if (email) {
+      const existingUser = await this.authRepo.FindByEmail(email);
+      if (existingUser && existingUser.id !== userId) {
+        throw new Error('Email already in use by another account');
+      }
+    }
+
+    const updatedUser = await this.authRepo.UpdateProfile(userId, name, email);
+
+    return {
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+    };
   }
 
   private generateAccessToken(
