@@ -47,4 +47,28 @@ export interface IPostRepository {
       updatedAt: Date;
     }>
   >;
+
+  getPostsByAgencyIdPaginated(
+    agencyId: string,
+    options: {
+      page: number;
+      limit: number;
+      status?: string;
+      search?: string;
+    }
+  ): Promise<{
+    posts: Array<
+      PostEntity & { platforms: Array<{ id: string; name: string }> }
+    >;
+    total: number;
+    page: number;
+    totalPages: number;
+  }>;
+
+  getPostsCountByStatus(agencyId: string): Promise<{
+    total: number;
+    published: number;
+    scheduled: number;
+    drafts: number;
+  }>;
 }

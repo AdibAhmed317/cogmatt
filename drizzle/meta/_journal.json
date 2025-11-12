@@ -36,6 +36,20 @@
       "when": 1761222332812,
       "tag": "0004_omniscient_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1762842691587,
+      "tag": "0005_chilly_major_mapleleaf",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762843164386,
+      "tag": "0006_keen_morlocks",
+      "breakpoints": true
     }
   ]
 }

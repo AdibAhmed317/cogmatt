@@ -5,7 +5,6 @@ import {
   timestamp,
   boolean,
   uuid,
-  jsonb,
   pgEnum,
 } from 'drizzle-orm/pg-core';
 
@@ -47,11 +46,6 @@ export const agencies = pgTable('agencies', {
 
 // Enums
 export const agencyUserRole = pgEnum('agency_user_role', ['admin', 'editor']);
-export const postStatus = pgEnum('post_status', [
-  'pending',
-  'posted',
-  'failed',
-]);
 export const messageStatus = pgEnum('message_status', ['unread', 'read']);
 
 // Agency Users (many-to-many between agencies and users)
@@ -97,36 +91,6 @@ export const socialAccounts = pgTable('social_accounts', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// Posts
-export const posts = pgTable('posts', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  agencyId: uuid('agency_id')
-    .notNull()
-    .references(() => agencies.id, { onDelete: 'cascade' }),
-  content: text('content').notNull(),
-  media: jsonb('media'),
-  scheduledAt: timestamp('scheduled_at'),
-  status: postStatus('status').notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
-// Post Platform Status (per-platform posting status)
-export const postPlatformStatus = pgTable('post_platform_status', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  postId: uuid('post_id')
-    .notNull()
-    .references(() => posts.id, { onDelete: 'cascade' }),
-  platformId: uuid('platform_id')
-    .notNull()
-    .references(() => platforms.id, { onDelete: 'cascade' }),
-  status: postStatus('status').notNull(),
-  response: jsonb('response'),
-  postedAt: timestamp('posted_at'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
 // Messages (centralized chat)
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -150,8 +114,5 @@ export const aiGeneratedContent = pgTable('ai_generated_content', {
     .references(() => agencies.id, { onDelete: 'cascade' }),
   prompt: text('prompt').notNull(),
   result: text('result').notNull(),
-  usedInPostId: uuid('used_in_post_id').references(() => posts.id, {
-    onDelete: 'set null',
-  }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });

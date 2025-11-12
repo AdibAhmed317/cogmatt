@@ -29,8 +29,13 @@ export class PostController {
     // Get post by ID
     this.router.get('/:id', (c) => this.getPost(c));
 
-    // Get all posts for an agency
-    this.router.get('/agency/:agencyId', (c) => this.getAgencyPosts(c));
+    // Get all posts for an agency (paginated)
+    this.router.get('/agency/:agencyId', (c) =>
+      this.getAgencyPostsPaginated(c)
+    );
+
+    // Get posts count by status
+    this.router.get('/agency/:agencyId/stats', (c) => this.getPostsStats(c));
 
     // Delete a post
     this.router.delete('/:id', (c) => this.deletePost(c));
@@ -124,6 +129,65 @@ export class PostController {
 
   /**
    * GET /api/posts/agency/:agencyId
+   * Get all posts for an agency (paginated with filters)
+   */
+  async getAgencyPostsPaginated(c: Context) {
+    try {
+      const agencyId = c.req.param('agencyId');
+      if (!agencyId) {
+        return c.json({ message: 'Agency ID required' }, 400);
+      }
+
+      const page = parseInt(c.req.query('page') || '1');
+      const limit = parseInt(c.req.query('limit') || '10');
+      const status = c.req.query('status') || 'all';
+      const search = c.req.query('search') || '';
+
+      const result = await this.postService.getAgencyPostsPaginated(agencyId, {
+        page,
+        limit,
+        status,
+        search,
+      });
+
+      return c.json(result);
+    } catch (error) {
+      console.error('Error getting agency posts:', error);
+      return c.json(
+        {
+          message: (error as Error).message || 'Failed to get posts',
+        },
+        400
+      );
+    }
+  }
+
+  /**
+   * GET /api/posts/agency/:agencyId/stats
+   * Get posts count by status
+   */
+  async getPostsStats(c: Context) {
+    try {
+      const agencyId = c.req.param('agencyId');
+      if (!agencyId) {
+        return c.json({ message: 'Agency ID required' }, 400);
+      }
+
+      const stats = await this.postService.getPostsCountByStatus(agencyId);
+      return c.json(stats);
+    } catch (error) {
+      console.error('Error getting posts stats:', error);
+      return c.json(
+        {
+          message: (error as Error).message || 'Failed to get stats',
+        },
+        400
+      );
+    }
+  }
+
+  /**
+   * GET /api/posts/agency/:agencyId (deprecated - kept for backwards compatibility)
    * Get all posts for an agency
    */
   async getAgencyPosts(c: Context) {

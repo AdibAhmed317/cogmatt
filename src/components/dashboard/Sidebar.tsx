@@ -7,6 +7,8 @@ import {
   Zap,
   BarChart,
   Settings,
+  Globe,
+  Box,
 } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 
@@ -15,9 +17,9 @@ const navLinks = [
   { name: 'Posts', href: '/dashboard/posts', icon: FileText },
   { name: 'AI', href: '/dashboard/ai', icon: Zap },
   { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
-  { name: 'Website', href: '/', icon: Calendar },
-  { name: 'Automation', href: '/', icon: Calendar },
-  { name: 'Product', href: '/', icon: Calendar },
+  { name: 'Website', href: '/', icon: Globe },
+  { name: 'Automation', href: '/', icon: Zap },
+  { name: 'Product', href: '/', icon: Box },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];

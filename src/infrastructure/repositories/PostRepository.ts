@@ -1,147 +1,39 @@
-// Infrastructure Layer - Post Repository Implementation
-import { db } from '../database/drizzle';
-import { posts, postPlatformStatus } from '../database/schema';
-import { eq } from 'drizzle-orm';
+﻿// Infrastructure Layer - Post Repository Implementation
+// NOTE: This repository is deprecated. We now fetch posts directly from Facebook.
+// Kept for backwards compatibility with existing controllers.
+
 import { IPostRepository } from '@/domain/repositories/IPostRepository';
 import { PostEntity } from '@/domain/entities/PostEntity';
 
 export class PostRepository implements IPostRepository {
-  async createPost(
+  async createPost(): Promise<PostEntity> {
+    throw new Error('Deprecated');
+  }
+  async getPostById(): Promise<PostEntity | null> {
+    throw new Error('Deprecated');
+  }
+  async getPostsByAgencyId(): Promise<PostEntity[]> {
+    throw new Error('Deprecated');
+  }
+  async updatePost(): Promise<PostEntity> {
+    throw new Error('Deprecated');
+  }
+  async deletePost(): Promise<void> {
+    throw new Error('Deprecated');
+  }
+  async createPostPlatformStatus(): Promise<void> {
+    throw new Error('Deprecated');
+  }
+  async getPostPlatformStatuses(): Promise<any[]> {
+    throw new Error('Deprecated');
+  }
+  async getPostsByAgencyIdPaginated(
     agencyId: string,
-    content: string,
-    media: any | null,
-    scheduledAt: Date | null,
-    status: 'pending' | 'posted' | 'failed'
-  ): Promise<PostEntity> {
-    const [post] = await db
-      .insert(posts)
-      .values({
-        agencyId,
-        content,
-        media,
-        scheduledAt,
-        status,
-      })
-      .returning();
-
-    return new PostEntity(
-      post.id,
-      post.agencyId,
-      post.content,
-      post.media,
-      post.scheduledAt,
-      post.status,
-      post.createdAt,
-      post.updatedAt
-    );
+    options: any
+  ): Promise<any> {
+    return { posts: [], total: 0, page: options.page, totalPages: 0 };
   }
-
-  async getPostById(id: string): Promise<PostEntity | null> {
-    const [post] = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.id, id))
-      .limit(1);
-
-    if (!post) return null;
-
-    return new PostEntity(
-      post.id,
-      post.agencyId,
-      post.content,
-      post.media,
-      post.scheduledAt,
-      post.status,
-      post.createdAt,
-      post.updatedAt
-    );
-  }
-
-  async getPostsByAgencyId(agencyId: string): Promise<PostEntity[]> {
-    const postList = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.agencyId, agencyId));
-
-    return postList.map(
-      (post) =>
-        new PostEntity(
-          post.id,
-          post.agencyId,
-          post.content,
-          post.media,
-          post.scheduledAt,
-          post.status,
-          post.createdAt,
-          post.updatedAt
-        )
-    );
-  }
-
-  async updatePost(
-    id: string,
-    updates: {
-      content?: string;
-      media?: any;
-      scheduledAt?: Date | null;
-      status?: 'pending' | 'posted' | 'failed';
-    }
-  ): Promise<PostEntity> {
-    const [post] = await db
-      .update(posts)
-      .set(updates)
-      .where(eq(posts.id, id))
-      .returning();
-
-    return new PostEntity(
-      post.id,
-      post.agencyId,
-      post.content,
-      post.media,
-      post.scheduledAt,
-      post.status,
-      post.createdAt,
-      post.updatedAt
-    );
-  }
-
-  async deletePost(id: string): Promise<void> {
-    await db.delete(posts).where(eq(posts.id, id));
-  }
-
-  async createPostPlatformStatus(
-    postId: string,
-    platformId: string,
-    status: 'pending' | 'posted' | 'failed',
-    response?: any,
-    postedAt?: Date
-  ): Promise<void> {
-    await db.insert(postPlatformStatus).values({
-      postId,
-      platformId,
-      status,
-      response: response || null,
-      postedAt: postedAt || null,
-    });
-  }
-
-  async getPostPlatformStatuses(postId: string): Promise<
-    Array<{
-      id: string;
-      postId: string;
-      platformId: string;
-      status: string;
-      response: any;
-      postedAt: Date | null;
-      createdAt: Date;
-      updatedAt: Date;
-    }>
-  > {
-    const statuses = await db
-      .select()
-      .from(postPlatformStatus)
-      .where(eq(postPlatformStatus.postId, postId));
-
-    return statuses;
+  async getPostsCountByStatus(): Promise<any> {
+    return { total: 0, published: 0, scheduled: 0, drafts: 0 };
   }
 }

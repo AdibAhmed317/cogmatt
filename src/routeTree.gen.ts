@@ -29,6 +29,7 @@ import { Route as ApiSocialAccountsRouteImport } from './routes/api/social-accou
 import { Route as ApiPostsRouteImport } from './routes/api/posts'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as ApiAgencyRouteImport } from './routes/api/agency'
+import { Route as ApiFacebookSplatRouteImport } from './routes/api/facebook/$'
 
 const UserRoute = UserRouteImport.update({
   id: '/user',
@@ -130,6 +131,11 @@ const ApiAgencyRoute = ApiAgencyRouteImport.update({
   path: '/api/agency',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFacebookSplatRoute = ApiFacebookSplatRouteImport.update({
+  id: '/api/facebook/$',
+  path: '/api/facebook/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/schedule': typeof DashboardScheduleRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/api/facebook/$': typeof ApiFacebookSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/dashboard/schedule': typeof DashboardScheduleRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/api/facebook/$': typeof ApiFacebookSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/dashboard/schedule': typeof DashboardScheduleRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/api/facebook/$': typeof ApiFacebookSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/dashboard/schedule'
     | '/dashboard/settings'
     | '/dashboard/'
+    | '/api/facebook/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/dashboard/schedule'
     | '/dashboard/settings'
     | '/dashboard'
+    | '/api/facebook/$'
   id:
     | '__root__'
     | '/'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/dashboard/schedule'
     | '/dashboard/settings'
     | '/dashboard/'
+    | '/api/facebook/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -280,6 +292,7 @@ export interface RootRouteChildren {
   ApiPostsRoute: typeof ApiPostsRoute
   ApiSocialAccountsRoute: typeof ApiSocialAccountsRoute
   ApiUserRoute: typeof ApiUserRoute
+  ApiFacebookSplatRoute: typeof ApiFacebookSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -424,6 +437,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgencyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/facebook/$': {
+      id: '/api/facebook/$'
+      path: '/api/facebook/$'
+      fullPath: '/api/facebook/$'
+      preLoaderRoute: typeof ApiFacebookSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -464,6 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPostsRoute: ApiPostsRoute,
   ApiSocialAccountsRoute: ApiSocialAccountsRoute,
   ApiUserRoute: ApiUserRoute,
+  ApiFacebookSplatRoute: ApiFacebookSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

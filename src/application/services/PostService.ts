@@ -6,6 +6,7 @@ import {
   PostResponseDTO,
   PublishPostResponseDTO,
 } from '../dtos/PostDTO';
+import { FacebookService } from './FacebookService';
 
 export class PostService {
   constructor(
@@ -15,6 +16,7 @@ export class PostService {
 
   /**
    * Create and optionally publish a post
+   * NOTE: This no longer saves to local database - posts go directly to Facebook
    */
   async createPost(
     dto: CreatePostDTO,
@@ -37,104 +39,57 @@ export class PostService {
       throw new Error('No valid social accounts found for this agency');
     }
 
-    // Create post record
-    const post = await this.postRepo.createPost(
-      dto.agencyId,
-      dto.content,
-      dto.media || null,
-      scheduledAt,
-      publishNow ? 'posted' : 'pending'
-    );
-
     const results: PublishPostResponseDTO['results'] = [];
 
-    // If publishing now, post to each platform
-    if (publishNow) {
-      for (const account of validAccounts) {
-        if (!account) continue;
+    // Publish directly to Facebook (no local database storage)
+    for (const account of validAccounts) {
+      if (!account) continue;
 
-        try {
-          const platform =
-            await this.socialAccountRepo.getPlatformByName('Facebook');
-          if (!platform) {
-            throw new Error('Facebook platform not found');
-          }
-
-          // Use accountId (Facebook Page ID) if available, otherwise skip
-          if (!account.accountId) {
-            throw new Error(
-              `Social account ${account.username} does not have a Facebook Page ID (accountId). Only Facebook Pages can post, not user accounts.`
-            );
-          }
-
-          // Publish to Facebook
-          const externalPostId = await this.publishToFacebook(
-            account.accountId,
-            account.accessToken,
-            dto.content,
-            dto.media
+      try {
+        // Use accountId (Facebook Page ID) if available
+        if (!account.accountId) {
+          throw new Error(
+            `Social account ${account.username} does not have a Facebook Page ID (accountId). Only Facebook Pages can post, not user accounts.`
           );
+        }
 
-          // Record success
-          await this.postRepo.createPostPlatformStatus(
-            post.id,
-            platform.id,
-            'posted',
-            { externalPostId },
-            new Date()
-          );
+        // Calculate scheduled time if provided
+        let scheduledPublishTime: number | undefined;
+        if (scheduledAt && !publishNow) {
+          scheduledPublishTime = Math.floor(scheduledAt.getTime() / 1000);
+        }
 
+        // Publish to Facebook using FacebookService
+        const result = await FacebookService.publishPost(
+          account.accountId,
+          account.accessToken,
+          dto.content,
+          scheduledPublishTime,
+          publishNow
+        );
+
+        if (result.success) {
           results.push({
             socialAccountId: account.id,
             platformName: 'Facebook',
             success: true,
-            externalPostId,
+            externalPostId: result.postId,
           });
-        } catch (error) {
-          console.error('Error publishing to Facebook:', {
-            accountId: account?.accountId,
-            username: account?.username,
-            error: (error as Error).message,
-          });
-
-          // Record failure
-          const platform =
-            await this.socialAccountRepo.getPlatformByName('Facebook');
-          if (platform) {
-            await this.postRepo.createPostPlatformStatus(
-              post.id,
-              platform.id,
-              'failed',
-              { error: (error as Error).message }
-            );
-          }
-
-          results.push({
-            socialAccountId: account.id,
-            platformName: 'Facebook',
-            success: false,
-            error: (error as Error).message,
-          });
+        } else {
+          throw new Error(result.error || 'Failed to publish');
         }
-      }
-    } else {
-      // Just create pending platform statuses
-      for (const account of validAccounts) {
-        if (!account) continue;
-        const platform =
-          await this.socialAccountRepo.getPlatformByName('Facebook');
-        if (platform) {
-          await this.postRepo.createPostPlatformStatus(
-            post.id,
-            platform.id,
-            'pending'
-          );
-        }
+      } catch (error) {
+        console.error('Error publishing to Facebook:', {
+          accountId: account?.accountId,
+          username: account?.username,
+          error: (error as Error).message,
+        });
 
         results.push({
           socialAccountId: account.id,
           platformName: 'Facebook',
-          success: true,
+          success: false,
+          error: (error as Error).message,
         });
       }
     }
@@ -143,7 +98,7 @@ export class PostService {
     const someSuccess = results.some((r) => r.success);
 
     return {
-      postId: post.id,
+      postId: results[0]?.externalPostId || 'unknown',
       status: allSuccess ? 'success' : someSuccess ? 'partial' : 'failed',
       results,
     };
@@ -204,46 +159,24 @@ export class PostService {
   }
 
   /**
-   * Publish to Facebook via Graph API
+   * Get paginated posts for an agency with filters
    */
-  private async publishToFacebook(
-    pageId: string,
-    accessToken: string,
-    message: string,
-    media?: any
-  ): Promise<string> {
-    const endpoint = `https://graph.facebook.com/v18.0/${pageId}/feed`;
-
-    // Facebook expects form data, not JSON
-    const formData = new URLSearchParams();
-    formData.append('message', message);
-    formData.append('access_token', accessToken);
-
-    // If media is provided, handle it
-    if (media && media.url) {
-      formData.append('link', media.url);
+  async getAgencyPostsPaginated(
+    agencyId: string,
+    options: {
+      page: number;
+      limit: number;
+      status?: string;
+      search?: string;
     }
+  ) {
+    return await this.postRepo.getPostsByAgencyIdPaginated(agencyId, options);
+  }
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString(),
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      console.error('Facebook API Error:', {
-        status: response.status,
-        error: responseData,
-      });
-      throw new Error(
-        responseData.error?.message || `Facebook API error: ${response.status}`
-      );
-    }
-
-    return responseData.id; // Facebook post ID
+  /**
+   * Get posts count by status
+   */
+  async getPostsCountByStatus(agencyId: string) {
+    return await this.postRepo.getPostsCountByStatus(agencyId);
   }
 }
