@@ -110,7 +110,7 @@ export class FacebookService {
             // Try to fetch engagement data separately
             const engagementUrl = `${this.GRAPH_API_BASE}/${post.id}?fields=reactions.summary(total_count),comments.summary(total_count),shares&access_token=${accessToken}`;
             const engagementRes = await fetch(engagementUrl);
-            
+
             if (engagementRes.ok) {
               const engagementData = await engagementRes.json();
               return {
@@ -121,14 +121,19 @@ export class FacebookService {
               };
             }
           } catch (error) {
-            console.log('[FacebookService] Could not fetch engagement for post:', post.id);
+            console.log(
+              '[FacebookService] Could not fetch engagement for post:',
+              post.id
+            );
           }
           return post;
         })
       );
 
       // Transform Facebook posts to our format
-      const transformed = postsWithEngagement.map((post) => this.transformFacebookPost(post));
+      const transformed = postsWithEngagement.map((post) =>
+        this.transformFacebookPost(post)
+      );
       console.log(
         '[FacebookService] Number of transformed posts:',
         transformed.length
